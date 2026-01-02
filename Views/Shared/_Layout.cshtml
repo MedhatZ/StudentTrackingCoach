@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Student Tracking Coach</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/StudentTrackingCoach.styles.css" asp-append-version="true" />
+</head>
+
+<body>
+    <div class="app-container">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h4>Student Tracking Coach</h4>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a asp-controller="Advisor" asp-action="Dashboard"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Advisor" ? "active" : "")">
+                    Advisor Dashboard
+                </a>
+
+                <a asp-controller="Students" asp-action="Index"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Students" ? "active" : "")">
+                    Students
+                </a>
+
+                <a asp-controller="Tasks" asp-action="Index"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Tasks" ? "active" : "")">
+                    Tasks
+                </a>
+
+                <a asp-controller="Admin" asp-action="Metrics"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" ? "active" : "")">
+                    Admin Metrics
+                </a>
+            </nav>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="content">
+            @RenderBody()
+        </main>
+
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

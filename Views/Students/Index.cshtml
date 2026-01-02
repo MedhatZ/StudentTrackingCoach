@@ -1,0 +1,98 @@
+﻿@model IEnumerable<StudentTrackingCoach.Models.ViewModels.StudentListViewModel>
+
+@{
+    ViewData["Title"] = "Students";
+}
+
+<h2 class="mb-4">Students</h2>
+
+<!-- 🔎 RISK FILTER CONTROLS -->
+<div class="mb-3">
+    <a asp-action="Index"
+       class="btn btn-outline-secondary me-2 @(ViewBag.HighRiskOnly == true ? "" : "active")">
+        Show All
+    </a>
+
+    <a asp-action="Index"
+       asp-route-highRiskOnly="true"
+       class="btn btn-outline-danger @(ViewBag.HighRiskOnly == true ? "active" : "")">
+        High Risk Only
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Risk</th>
+                    <th>Student ID</th>
+                    <th>Status</th>
+                    <th>First Gen</th>
+                    <th>Working</th>
+                    <th>Modality</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var student in Model)
+                {
+                    string riskLabel;
+                    string riskClass;
+
+                    if (student.HasOpenPendingActions)
+                    {
+                        riskLabel = "High";
+                        riskClass = "bg-danger";
+                    }
+                    else if (!student.IsFirstGen.HasValue || !student.IsWorking.HasValue)
+                    {
+                        riskLabel = "Medium";
+                        riskClass = "bg-warning text-dark";
+                    }
+                    else
+                    {
+                        riskLabel = "Low";
+                        riskClass = "bg-success";
+                    }
+
+                <tr class="student-row"
+                    onclick="window.location='@Url.Action("Details", "Students", new { id = student.StudentId })'">
+
+                    <td>
+                        <span class="badge @riskClass">@riskLabel</span>
+                    </td>
+
+                    <td>@student.StudentId</td>
+
+                    <td>@student.EnrollmentStatus</td>
+
+                    <td>
+                        @(student.IsFirstGen == true
+                                                ? "Yes"
+                                                : student.IsFirstGen == false
+                                                ? "No"
+                                                : "Unknown")
+                        </td>
+
+                        <td>
+                            @(student.IsWorking == true
+                                                    ? "Yes"
+                                                    : student.IsWorking == false
+                                                    ? "No"
+                                                    : "Unknown")
+                        </td>
+
+                        <td>@student.PreferredModality</td>
+
+                        <td>
+                            @(student.CreatedAt.HasValue
+                                                    ? student.CreatedAt.Value.ToString("MM/dd/yyyy")
+                                                    : "N/A")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

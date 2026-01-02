@@ -1,0 +1,115 @@
+﻿@model StudentTrackingCoach.Controllers.AdvisorDashboardViewModel
+
+@{
+    ViewData["Title"] = "Advisor Dashboard";
+}
+
+<h2 class="mb-4">Advisor Dashboard</h2>
+
+<!-- SUMMARY CARDS -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Total Students</h6>
+                <h2>@Model.TotalStudents</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm border-start border-danger border-4">
+            <div class="card-body">
+                <h6 class="text-muted">High-Risk Students</h6>
+                <h2 class="text-danger">@Model.HighRiskStudents</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Open Tasks</h6>
+                <h2>@Model.OpenTasks</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- STUDENTS REQUIRING ATTENTION -->
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5 class="mb-3">Students Requiring Attention</h5>
+
+        @if (!Model.StudentsNeedingAttention.Any())
+        {
+            <p class="text-muted">
+                <em>No students currently require attention.</em>
+            </p>
+        }
+        else
+        {
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Risk</th>
+                        <th>Severity</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var student in Model.StudentsNeedingAttention)
+                    {
+                        string severityLabel;
+                        string severityClass;
+
+                        if (student.RiskScore >= 1.0)
+                        {
+                            severityLabel = "Critical";
+                            severityClass = "badge bg-danger";
+                        }
+                        else if (student.RiskScore >= 0.75)
+                        {
+                            severityLabel = "High";
+                            severityClass = "badge bg-warning text-dark";
+                        }
+                        else if (student.RiskScore >= 0.5)
+                        {
+                            severityLabel = "Moderate";
+                            severityClass = "badge bg-info text-dark";
+                        }
+                        else
+                        {
+                            severityLabel = "Low";
+                            severityClass = "badge bg-success";
+                        }
+
+                        <tr>
+                            <td>@student.StudentId</td>
+
+                            <td class="fw-bold">
+                                @student.RiskScore.ToString("0.00")
+                            </td>
+
+                            <td>
+                                <span class="@severityClass">
+                                    @severityLabel
+                                </span>
+                            </td>
+
+                            <td>
+                                <a asp-controller="Students"
+                                   asp-action="Details"
+                                   asp-route-id="@student.StudentId"
+                                   class="btn btn-sm btn-primary">
+                                    Review
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

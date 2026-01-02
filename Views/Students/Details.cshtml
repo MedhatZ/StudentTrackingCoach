@@ -1,0 +1,110 @@
+﻿@model StudentTrackingCoach.Models.Student
+
+<h2>Student Details</h2>
+
+<hr />
+
+<dl class="row">
+    <dt class="col-sm-3">Student ID</dt>
+    <dd class="col-sm-9">@Model.StudentId</dd>
+
+    <dt class="col-sm-3">Enrollment Status</dt>
+    <dd class="col-sm-9">@Model.EnrollmentStatus</dd>
+
+    <dt class="col-sm-3">First Generation</dt>
+    <dd class="col-sm-9">@Model.IsFirstGen</dd>
+
+    <dt class="col-sm-3">Working</dt>
+    <dd class="col-sm-9">@Model.IsWorking</dd>
+
+    <dt class="col-sm-3">Preferred Modality</dt>
+    <dd class="col-sm-9">@Model.PreferredModality</dd>
+
+    <dt class="col-sm-3">Created At</dt>
+    <dd class="col-sm-9">@Model.CreatedAt</dd>
+</dl>
+
+<hr />
+
+<h3>Decision History</h3>
+
+@if (ViewBag.Decisions == null || ViewBag.Decisions.Count == 0)
+{
+    <p><em>No decisions recorded.</em></p>
+}
+else
+{
+    <table class="table table-sm table-bordered">
+        <thead>
+            <tr>
+                <th>Decision</th>
+                <th>Reason</th>
+                <th>Source</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var d in ViewBag.Decisions)
+            {
+                <tr>
+                    <td>@d.Decision</td>
+                    <td>@d.Reason</td>
+                    <td>@d.Source</td>
+                    <td>@d.CreatedAt</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<hr />
+<form asp-action="RunInterventions" method="post" class="mb-3">
+    <input type="hidden" name="studentId" value="@Model.StudentId" />
+    <button type="submit" class="btn btn-warning">
+        Run Coaching Rules
+    </button>
+</form>
+
+<h3>Pending Actions</h3>
+
+@if (ViewBag.PendingActions == null || ViewBag.PendingActions.Count == 0)
+{
+    <p><em>No pending actions for this student.</em></p>
+}
+else
+{
+    <table class="table table-sm table-bordered">
+        <thead>
+            <tr>
+                <th>Priority</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in ViewBag.PendingActions)
+            {
+                <tr>
+                    <td>@a.Priority</td>
+                    <td>@a.Reason</td>
+                    <td>@a.Status</td>
+                    <td>@a.CreatedAt</td>
+                    <td>
+                        @if (a.Status != "Completed")
+                        {
+                            <form asp-action="ResolveAction" method="post">
+                                <input type="hidden" name="actionId" value="@a.ActionId" />
+                                <input type="hidden" name="studentId" value="@Model.StudentId" />
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    Resolve
+                                </button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
