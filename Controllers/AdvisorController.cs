@@ -13,63 +13,55 @@ namespace StudentTrackingCoach.Controllers
             _context = context;
         }
 
-        // GET: /Advisor/Dashboard
-        public async Task<IActionResult> Dashboard()
+        // ============================
+        // PAGE 1: Advisor Dashboard
+        // ============================
+        public async Task<IActionResult> Index()
         {
-            // 🔢 SUMMARY COUNTS
-            int totalStudents = await _context.Students.CountAsync();
-
-            int highRiskStudents = await _context.Students
-                .CountAsync(s =>
-                    _context.PendingActions.Any(p =>
-                        p.StudentId == s.StudentId &&
-                        p.Status != "Completed"));
-
-            int openTasks = await _context.PendingActions
-                .CountAsync(p => p.Status != "Completed");
-
-            // 📋 STUDENTS NEEDING ATTENTION
-            var studentsNeedingAttention = await _context.Students
-                .Where(s =>
-                    _context.PendingActions.Any(p =>
-                        p.StudentId == s.StudentId &&
-                        p.Status != "Completed"))
-                .Select(s => new AdvisorDashboardStudentView
-                {
-                    StudentId = s.StudentId,
-                    RiskScore = _context.PendingActions
-                        .Where(p => p.StudentId == s.StudentId && p.Status != "Completed")
-                        .Count() * 0.25
-                })
-                .OrderByDescending(s => s.RiskScore)
+            var dashboard = await _context.AdvisorRiskDashboard
+                .AsNoTracking()
+                .OrderByDescending(r => r.RiskScore)
                 .ToListAsync();
 
-            var viewModel = new AdvisorDashboardViewModel
-            {
-                TotalStudents = totalStudents,
-                HighRiskStudents = highRiskStudents,
-                OpenTasks = openTasks,
-                StudentsNeedingAttention = studentsNeedingAttention
-            };
-
-            return View(viewModel);
+            return View(dashboard);
         }
-    }
 
-    // 📦 DASHBOARD VIEW MODELS
-    public class AdvisorDashboardViewModel
-    {
-        public int TotalStudents { get; set; }
-        public int HighRiskStudents { get; set; }
-        public int OpenTasks { get; set; }
+        // ============================
+        // PAGE 2: High-Risk Triage
+        // ============================
+        public async Task<IActionResult> Triage()
+        {
+            var students = await _context.AdvisorRiskDashboard
+                .AsNoTracking()
+                .Where(r => r.RiskLevel == "High" || r.RiskLevel == "Medium")
+                .OrderBy(r => r.RiskLevel)
+                .ThenBy(r => r.AverageScore)
+                .ToListAsync();
 
-        public List<AdvisorDashboardStudentView> StudentsNeedingAttention { get; set; }
-            = new();
-    }
+            return View(students);
+        }
 
-    public class AdvisorDashboardStudentView
-    {
-        public long StudentId { get; set; }
-        public double RiskScore { get; set; }
+        // ============================
+        // PAGE 3: Student Detail
+        // ============================
+        public async Task<IActionResult> Student(long id)
+        {
+            var student = await _context.AdvisorRiskDashboard
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.StudentID == id);
+
+            if (student == null)
+                return NotFound();
+
+            var narrative = await _context.StudentRiskNarratives
+                .AsNoTracking()
+                .Where(n => n.StudentID == id)
+                .Select(n => n.AdvisorNarrative)
+                .FirstOrDefaultAsync();
+
+            ViewBag.Narrative = narrative;
+
+            return View(student);
+        }
     }
 }

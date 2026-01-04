@@ -2,59 +2,122 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Student Tracking Coach</title>
+    <title>@ViewData["Title"] - StudentTrackingCoach</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/StudentTrackingCoach.styles.css" asp-append-version="true" />
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+    <style>
+        /* =========================
+                   PAGE BACKGROUND (CONTRAST)
+                ========================== */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e2e8f0; /* contrast background */
+            margin: 0;
+        }
+
+        /* =========================
+                   SIDEBAR
+                ========================== */
+        .sidebar {
+            width: 240px;
+            height: 100vh;
+            background: #0d1b2a;
+            color: #ffffff;
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding: 20px;
+            z-index: 10;
+        }
+
+            .sidebar h4 {
+                font-weight: 600;
+                margin-bottom: 30px;
+            }
+
+            .sidebar a {
+                display: block;
+                color: #cbd5e1;
+                text-decoration: none;
+                padding: 10px 12px;
+                border-radius: 6px;
+                margin-bottom: 4px;
+            }
+
+                .sidebar a:hover {
+                    background: #1b263b;
+                    color: #ffffff;
+                }
+
+        /* =========================
+                   APP FRAME (VISIBLE BORDER)
+                ========================== */
+        .app-frame {
+            margin-left: 240px;
+            min-height: calc(100vh - 36px);
+            background-color: #f8fafc;
+            border-top: 18px solid #0d1b2a;
+            border-right: 18px solid #0d1b2a;
+            border-bottom: 18px solid #0d1b2a;
+            box-sizing: border-box;
+        }
+
+        /* =========================
+                   MAIN CONTENT
+                ========================== */
+        .main {
+            padding: 30px;
+        }
+
+        /* =========================
+                   TOP BAR
+                ========================== */
+        .topbar {
+            background: #ffffff;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+    </style>
 </head>
 
 <body>
-    <div class="app-container">
 
-        <!-- SIDEBAR -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h4>Student Tracking Coach</h4>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h4>StudentTrackingCoach</h4>
+
+        <a asp-controller="Home" asp-action="Index">Dashboard</a>
+        <a asp-controller="Students" asp-action="Index">Students</a>
+        <a asp-controller="Advisor" asp-action="Index">Advisors</a>
+        <a asp-controller="Tasks" asp-action="Index">Tasks</a>
+        <a asp-controller="Admin" asp-action="Index">Admin</a>
+    </div>
+
+    <!-- App Frame -->
+    <div class="app-frame">
+
+        <div class="main">
+
+            <div class="topbar d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">@ViewData["Title"]</h5>
+                <span class="text-muted">Advisor Portal</span>
             </div>
 
-            <nav class="sidebar-nav">
-                <a asp-controller="Advisor" asp-action="Dashboard"
-                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Advisor" ? "active" : "")">
-                    Advisor Dashboard
-                </a>
-
-                <a asp-controller="Students" asp-action="Index"
-                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Students" ? "active" : "")">
-                    Students
-                </a>
-
-                <a asp-controller="Tasks" asp-action="Index"
-                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Tasks" ? "active" : "")">
-                    Tasks
-                </a>
-
-                <a asp-controller="Admin" asp-action="Metrics"
-                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" ? "active" : "")">
-                    Admin Metrics
-                </a>
-            </nav>
-        </aside>
-
-        <!-- MAIN CONTENT -->
-        <main class="content">
             @RenderBody()
-        </main>
+
+        </div>
 
     </div>
 
-    <!-- SCRIPTS -->
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    @RenderSection("Scripts", required: false)
 
-    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
