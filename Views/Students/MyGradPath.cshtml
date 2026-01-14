@@ -1,0 +1,36 @@
+﻿<h4>Your Progress</h4>
+
+@if (Model.CompletedItems.Count == 0)
+{
+    <p class="text-muted">
+        This section highlights the progress you’ve already made.
+    </p>
+
+}
+else
+{
+    <div class="list-group">
+        @foreach (var item in Model.CompletedItems)
+
+        {
+            <div class="list-group-item border-0 mb-3">
+                <div class="d-flex align-items-start">
+                    <div class="me-3">
+                        <span class="badge bg-success rounded-circle p-3">
+                            ✓
+                        </span>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">@item.AlertTitle</h6>
+                        <p class="mb-1 text-muted">
+                            @item.ActionNotes
+                        </p>
+                        <small class="text-success">
+                            Completed on @item.ResolvedAt?.ToShortDateString()
+                        </small>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

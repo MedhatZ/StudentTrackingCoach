@@ -1,25 +1,23 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace StudentTrackingCoach.Models
 {
-    [Table("DecisionAudit", Schema = "dbo")]
+    [Table("DecisionAudits")]   // ✅ THIS IS THE FIX
     public class DecisionAudit
     {
-        [Key]
-        public long AuditId { get; set; }
+        public long DecisionAuditId { get; set; }
 
-        public long? StudentId { get; set; }
+        public long StudentId { get; set; }
 
-        [Required]
-        public string Decision { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? DecisionDate { get; set; }
 
+        public string? ActionTaken { get; set; }
+        public string? Notes { get; set; }
+
+        public string? Decision { get; set; }
         public string? Reason { get; set; }
-
-        [Required]
-        public string Source { get; set; } = string.Empty;
-
-        public DateTime CreatedAt { get; set; }
+        public string Source { get; set; } = "StudentTrackingCoach";
     }
 }

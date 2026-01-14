@@ -1,8 +1,44 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+<ul class="navbar-nav ms-auto">
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <li class="nav-item">
+            <span class="nav-link text-muted">
+                Hello @User.Identity?.Name
+            </span>
+        </li>
+        <li class="nav-item">
+            <form asp-area="Identity"
+                  asp-page="/Account/Logout"
+                  method="post"
+                  class="form-inline">
+                <button type="submit" class="btn btn-link nav-link">
+                    Logout
+                </button>
+            </form>
+        </li>
+    }
+    else
+    {
+        <li class="nav-item">
+            <a class="nav-link"
+               asp-area="Identity"
+               asp-page="/Account/Login">
+                Login
+            </a>
+        </li>
+    }
+</ul>
+
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>@ViewData["Title"] - StudentTrackingCoach</title>
+    <title>@ViewData["Title"] - Grad Path</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <!-- Fonts -->
@@ -13,17 +49,17 @@
 
     <style>
         /* =========================
-                   PAGE BACKGROUND (CONTRAST)
-                ========================== */
+                           PAGE BACKGROUND (CONTRAST)
+                        ========================== */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #e2e8f0; /* contrast background */
+            background-color: #e2e8f0;
             margin: 0;
         }
 
         /* =========================
-                   SIDEBAR
-                ========================== */
+                           SIDEBAR
+                        ========================== */
         .sidebar {
             width: 240px;
             height: 100vh;
@@ -56,8 +92,8 @@
                 }
 
         /* =========================
-                   APP FRAME (VISIBLE BORDER)
-                ========================== */
+                           APP FRAME (VISIBLE BORDER)
+                        ========================== */
         .app-frame {
             margin-left: 240px;
             min-height: calc(100vh - 36px);
@@ -69,15 +105,15 @@
         }
 
         /* =========================
-                   MAIN CONTENT
-                ========================== */
+                           MAIN CONTENT
+                        ========================== */
         .main {
             padding: 30px;
         }
 
         /* =========================
-                   TOP BAR
-                ========================== */
+                           TOP BAR
+                        ========================== */
         .topbar {
             background: #ffffff;
             padding: 15px 25px;
@@ -92,9 +128,10 @@
 
     <!-- Sidebar -->
     <div class="sidebar">
-        <h4>StudentTrackingCoach</h4>
+        <h4>Grad Path</h4>
 
         <a asp-controller="Home" asp-action="Index">Dashboard</a>
+        <a asp-controller="Students" asp-action="MyGradPath">My Grad Path</a>
         <a asp-controller="Students" asp-action="Index">Students</a>
         <a asp-controller="Advisor" asp-action="Index">Advisors</a>
         <a asp-controller="Tasks" asp-action="Index">Tasks</a>
@@ -103,21 +140,25 @@
 
     <!-- App Frame -->
     <div class="app-frame">
-
         <div class="main">
 
             <div class="topbar d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">@ViewData["Title"]</h5>
-                <span class="text-muted">Advisor Portal</span>
+                <span class="text-muted">Grad Path Platform</span>
             </div>
 
             @RenderBody()
 
         </div>
-
     </div>
 
     @RenderSection("Scripts", required: false)
 
 </body>
 </html>
+
+
+
+
+
+

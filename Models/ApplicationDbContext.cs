@@ -1,8 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace StudentTrackingCoach.Models
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext
+        : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -14,6 +16,7 @@ namespace StudentTrackingCoach.Models
         // =========================
         public DbSet<Student> Students { get; set; }
         public DbSet<Advisor> Advisors { get; set; }
+        public DbSet<AdvisorStudent> AdvisorStudents { get; set; }
         public DbSet<DecisionAudit> DecisionAudits { get; set; }
         public DbSet<PendingAction> PendingActions { get; set; }
 
@@ -22,20 +25,54 @@ namespace StudentTrackingCoach.Models
         // =========================
         public DbSet<AdvisorRiskDashboardDto> AdvisorRiskDashboard { get; set; }
         public DbSet<StudentRiskNarrativeDto> StudentRiskNarratives { get; set; }
+        public DbSet<SuccessStudentMyGradPath> SuccessStudentMyGradPath { get; set; }
 
-        // =========================
-        // MODEL CONFIGURATION
-        // =========================
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Advisor dashboard view
+            // -------------------------
+            // TABLE MAPPINGS
+            // -------------------------
+            modelBuilder.Entity<Student>()
+                .ToTable("Student", "dbo");
+
+            modelBuilder.Entity<Advisor>()
+                .ToTable("Advisor", "dbo");
+
+            modelBuilder.Entity<AdvisorStudent>()
+                .ToTable("AdvisorStudent", "dbo");
+
+            modelBuilder.Entity<DecisionAudit>()
+                .ToTable("DecisionAudits", "dbo");
+
+            modelBuilder.Entity<PendingAction>()
+                .ToTable("PendingAction", "dbo");
+
+            // -------------------------
+            // RELATIONSHIPS
+            // -------------------------
+            modelBuilder.Entity<AdvisorStudent>()
+                .HasOne(x => x.Advisor)
+                .WithMany()
+                .HasForeignKey(x => x.AdvisorId);
+
+            modelBuilder.Entity<AdvisorStudent>()
+                .HasOne(x => x.Student)
+                .WithMany()
+                .HasForeignKey(x => x.StudentId);
+
+            // -------------------------
+            // SQL VIEWS (READ-ONLY)
+            // -------------------------
+            modelBuilder.Entity<SuccessStudentMyGradPath>()
+                .HasNoKey()
+                .ToView("vw_StudentMyGradPath", "success");
+
             modelBuilder.Entity<AdvisorRiskDashboardDto>()
                 .HasNoKey()
                 .ToView("vw_AdvisorRiskDashboard", "analytics");
 
-            // Student narrative view
             modelBuilder.Entity<StudentRiskNarrativeDto>()
                 .HasNoKey()
                 .ToView("vw_StudentRiskNarrative", "analytics");

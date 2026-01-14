@@ -1,34 +1,51 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using StudentTrackingCoach.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ Standard, expected connection string key
+// ================================
+// DATABASE
+// ================================
 var connectionString =
-    builder.Configuration.GetConnectionString("DefaultConnection");
+    builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("DefaultConnection missing.");
 
-if (string.IsNullOrWhiteSpace(connectionString))
-{
-    throw new InvalidOperationException(
-        "DefaultConnection connection string is missing or invalid.");
-}
-
-// ✅ EF Core SQL Server registration
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(connectionString));
+
+// ================================
+// IDENTITY (WITH UI)
+// ================================
+builder.Services
+    .AddIdentity<ApplicationUser, IdentityRole>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = false;
+    })
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders()
+    .AddDefaultUI();
+
+// 🔐 COOKIE CONFIG (THIS FIXES LOGOUT + ACCESS DENIED)
+builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.UseSqlServer(
-        connectionString,
-        sql => sql.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(10),
-            errorNumbersToAdd: null));
+    options.LoginPath = "/Identity/Account/Login";
+    options.LogoutPath = "/Identity/Account/Logout";
+    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+    options.SlidingExpiration = true;
 });
 
+// ================================
+// MVC + RAZOR
+// ================================
 builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
-// ✅ Environment-specific pipeline
+// ================================
+// PIPELINE
+// ================================
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -40,11 +57,16 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
-// ✅ Default MVC route
+// ================================
+// ROUTES
+// ================================
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.MapRazorPages(); // REQUIRED for Identity UI
 
 app.Run();

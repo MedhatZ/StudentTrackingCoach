@@ -11,8 +11,8 @@
 <div class="mb-3">
     <strong>Risk Level:</strong>
     <span class="badge @(Model.RiskLevel == "High" ? "bg-danger" :
-                                    Model.RiskLevel == "Medium" ? "bg-warning text-dark" :
-                                    "bg-success")">
+                                              Model.RiskLevel == "Medium" ? "bg-warning text-dark" :
+                                              "bg-success")">
         @Model.RiskLevel
     </span>
 </div>
@@ -39,7 +39,8 @@
 <h4>Advisor Action</h4>
 
 <form asp-action="LogDecision" method="post">
-    <input type="hidden" name="StudentId" value="@Model.StudentID" />
+    <!-- ✅ FIXED: StudentID → StudentId -->
+    <input type="hidden" name="StudentId" value="@Model.StudentId" />
 
     <div class="mb-3">
         <label class="form-label">Action Taken</label>

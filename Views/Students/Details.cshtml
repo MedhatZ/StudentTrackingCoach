@@ -1,7 +1,10 @@
 ﻿@model StudentTrackingCoach.Models.Student
 
-<h2>Student Details</h2>
+@{
+    ViewData["Title"] = "Student Details";
+}
 
+<h2>Student Details</h2>
 <hr />
 
 <dl class="row">
@@ -12,10 +15,18 @@
     <dd class="col-sm-9">@Model.EnrollmentStatus</dd>
 
     <dt class="col-sm-3">First Generation</dt>
-    <dd class="col-sm-9">@Model.IsFirstGen</dd>
+    <dd class="col-sm-9">
+        @(Model.IsFirstGen.HasValue
+                ? (Model.IsFirstGen.Value ? "Yes" : "No")
+                : "Unknown")
+    </dd>
 
     <dt class="col-sm-3">Working</dt>
-    <dd class="col-sm-9">@Model.IsWorking</dd>
+    <dd class="col-sm-9">
+        @(Model.IsWorking.HasValue
+                ? (Model.IsWorking.Value ? "Yes" : "No")
+                : "Unknown")
+    </dd>
 
     <dt class="col-sm-3">Preferred Modality</dt>
     <dd class="col-sm-9">@Model.PreferredModality</dd>
@@ -28,7 +39,7 @@
 
 <h3>Decision History</h3>
 
-@if (ViewBag.Decisions == null || ViewBag.Decisions.Count == 0)
+@if (ViewBag.Decisions == null || ((IEnumerable<dynamic>)ViewBag.Decisions).Count() == 0)
 {
     <p><em>No decisions recorded.</em></p>
 }
@@ -58,6 +69,7 @@ else
 }
 
 <hr />
+
 <form asp-action="RunInterventions" method="post" class="mb-3">
     <input type="hidden" name="studentId" value="@Model.StudentId" />
     <button type="submit" class="btn btn-warning">
@@ -67,7 +79,7 @@ else
 
 <h3>Pending Actions</h3>
 
-@if (ViewBag.PendingActions == null || ViewBag.PendingActions.Count == 0)
+@if (ViewBag.PendingActions == null || ((IEnumerable<dynamic>)ViewBag.PendingActions).Count() == 0)
 {
     <p><em>No pending actions for this student.</em></p>
 }

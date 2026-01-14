@@ -1,67 +1,57 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StudentTrackingCoach.Models;
 
 namespace StudentTrackingCoach.Controllers
 {
+    [Authorize(Roles = "Advisor,Admin")]
     public class AdvisorController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public AdvisorController(ApplicationDbContext context)
+        public AdvisorController(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
-        // ============================
-        // PAGE 1: Advisor Dashboard
-        // ============================
         public async Task<IActionResult> Index()
         {
-            var dashboard = await _context.AdvisorRiskDashboard
-                .AsNoTracking()
-                .OrderByDescending(r => r.RiskScore)
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Challenge();
+
+            // ✅ ADMIN OVERRIDE
+            if (User.IsInRole("Admin"))
+            {
+                var dashboard = await _context.AdvisorRiskDashboard
+                    .OrderBy(d => d.StudentId)
+                    .ToListAsync();
+
+                return View(dashboard);
+            }
+
+            // 🔐 Advisor-only logic
+            if (!user.AdvisorId.HasValue)
+                return Forbid();
+
+            int advisorId = user.AdvisorId.Value;
+
+            var assignedStudentIds = await _context.AdvisorStudents
+                .Where(a => a.AdvisorId == advisorId)
+                .Select(a => a.StudentId)
                 .ToListAsync();
 
-            return View(dashboard);
-        }
-
-        // ============================
-        // PAGE 2: High-Risk Triage
-        // ============================
-        public async Task<IActionResult> Triage()
-        {
-            var students = await _context.AdvisorRiskDashboard
-                .AsNoTracking()
-                .Where(r => r.RiskLevel == "High" || r.RiskLevel == "Medium")
-                .OrderBy(r => r.RiskLevel)
-                .ThenBy(r => r.AverageScore)
+            var advisorDashboard = await _context.AdvisorRiskDashboard
+                .Where(d => assignedStudentIds.Contains(d.StudentId))
                 .ToListAsync();
 
-            return View(students);
-        }
-
-        // ============================
-        // PAGE 3: Student Detail
-        // ============================
-        public async Task<IActionResult> Student(long id)
-        {
-            var student = await _context.AdvisorRiskDashboard
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.StudentID == id);
-
-            if (student == null)
-                return NotFound();
-
-            var narrative = await _context.StudentRiskNarratives
-                .AsNoTracking()
-                .Where(n => n.StudentID == id)
-                .Select(n => n.AdvisorNarrative)
-                .FirstOrDefaultAsync();
-
-            ViewBag.Narrative = narrative;
-
-            return View(student);
+            return View(advisorDashboard);
         }
     }
 }

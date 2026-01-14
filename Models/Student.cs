@@ -22,5 +22,18 @@ namespace StudentTrackingCoach.Models
         public string? PreferredModality { get; set; }
 
         public DateTime? CreatedAt { get; set; }
+
+        // ============================
+        // FUTURE IDENTITY FIELDS
+        // (NOT IN DB YET)
+        // ============================
+        [NotMapped]
+        public string? FirstName { get; set; }
+
+        [NotMapped]
+        public string? LastName { get; set; }
+
+        [NotMapped]
+        public string FullName => $"Student #{StudentId}";
     }
 }
