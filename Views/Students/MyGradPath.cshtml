@@ -1,17 +1,17 @@
-﻿<h4>Your Progress</h4>
+﻿@model StudentTrackingCoach.Models.ViewModels.StudentMyGradPathViewModel
 
-@if (Model.CompletedItems.Count == 0)
+<h4>Your Progress</h4>
+
+@if (Model == null || Model.CompletedItems == null || !Model.CompletedItems.Any())
 {
     <p class="text-muted">
         This section highlights the progress you’ve already made.
     </p>
-
 }
 else
 {
     <div class="list-group">
         @foreach (var item in Model.CompletedItems)
-
         {
             <div class="list-group-item border-0 mb-3">
                 <div class="d-flex align-items-start">
@@ -22,9 +22,7 @@ else
                     </div>
                     <div>
                         <h6 class="mb-1">@item.AlertTitle</h6>
-                        <p class="mb-1 text-muted">
-                            @item.ActionNotes
-                        </p>
+                        <p class="mb-1 text-muted">@item.ActionNotes</p>
                         <small class="text-success">
                             Completed on @item.ResolvedAt?.ToShortDateString()
                         </small>

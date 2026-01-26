@@ -40,20 +40,21 @@
                     string riskLabel;
                     string riskClass;
 
-                    if (student.HasOpenPendingActions)
+                    // 🔥 SINGLE SOURCE OF TRUTH — RiskPriority
+                    switch (student.RiskPriority)
                     {
-                        riskLabel = "High";
-                        riskClass = "bg-danger";
-                    }
-                    else if (!student.IsFirstGen.HasValue || !student.IsWorking.HasValue)
-                    {
-                        riskLabel = "Medium";
-                        riskClass = "bg-warning text-dark";
-                    }
-                    else
-                    {
-                        riskLabel = "Low";
-                        riskClass = "bg-success";
+                        case 1:
+                            riskLabel = "High";
+                            riskClass = "bg-danger";
+                            break;
+                        case 2:
+                            riskLabel = "Medium";
+                            riskClass = "bg-warning text-dark";
+                            break;
+                        default:
+                            riskLabel = "Low";
+                            riskClass = "bg-success";
+                            break;
                     }
 
                 <tr class="student-row"

@@ -11,22 +11,32 @@ namespace StudentTrackingCoach.Models.ViewModels
 
         public string OverallStatus { get; set; } = "On Track";
 
-        public string CurrentFocusMessage { get; set; } = "";
+        public string CurrentFocusMessage { get; set; } = string.Empty;
 
-        // ✅ Advisor panel fields
+        // ================================
+        // Advisor Panel
+        // ================================
         public string AdvisorName { get; set; } = "Your Advisor";
         public string AdvisorLastAction { get; set; } = "No recent advisor actions.";
         public DateTime? AdvisorLastContactDate { get; set; }
 
-        public List<GradPathItem> ActiveItems { get; set; } = new();
+        // ================================
+        // Grad Path Items (SAFE + INITIALIZED)
+        // ================================
+        public List<StudentMyGradPathItemViewModel> ActiveItems { get; set; }
+            = new List<StudentMyGradPathItemViewModel>();
 
-        public List<GradPathItem> CompletedItems { get; set; } = new();
+        public List<StudentMyGradPathItemViewModel> CompletedItems { get; set; }
+            = new List<StudentMyGradPathItemViewModel>();
     }
 
-    public class GradPathItem
+    // ===================================
+    // ITEM VIEW MODEL (USED BY CONTROLLER + VIEW)
+    // ===================================
+    public class StudentMyGradPathItemViewModel
     {
-        public string AlertTitle { get; set; } = "";
-        public string ActionNotes { get; set; } = "";
+        public string AlertTitle { get; set; } = string.Empty;
+        public string? ActionNotes { get; set; }
         public DateTime? DueDate { get; set; }
         public DateTime? ResolvedAt { get; set; }
     }

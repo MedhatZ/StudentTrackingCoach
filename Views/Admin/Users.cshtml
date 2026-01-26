@@ -1,0 +1,110 @@
+﻿@model StudentTrackingCoach.Models.ViewModels.AdminUserListViewModel
+
+@{
+    ViewData["Title"] = "Admin - Users";
+}
+
+<h2>Admin User Management</h2>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div style="padding:10px; margin-bottom:10px; border:1px solid green; color:green;">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<form method="get" class="mb-3">
+    <input type="text"
+           name="search"
+           value="@Model.Search"
+           placeholder="Search by email or username" />
+    <button type="submit">Search</button>
+</form>
+
+<table border="1" cellpadding="6" cellspacing="0">
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>UserName</th>
+            <th>Roles</th>
+            <th>Status</th>
+            <th>StudentId</th>
+            <th>AdvisorId</th>
+
+            @* 🔐 Actions column — Admins only *@
+            @if (User.IsInRole("Admin"))
+            {
+                <th>Actions</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var u in Model.Users)
+        {
+            <tr>
+                <td>@u.Email</td>
+                <td>@u.UserName</td>
+                <td>
+                    @if (u.Roles.Any())
+                    {
+                        @string.Join(", ", u.Roles)
+                    }
+                    else
+                    {
+                        <span>None</span>
+                    }
+                </td>
+                <td>
+                    @(u.IsDisabled ? "Disabled" : "Active")
+                </td>
+                <td>@(u.StudentId?.ToString() ?? "-")</td>
+                <td>@(u.AdvisorId?.ToString() ?? "-")</td>
+
+                @* 🔐 Actions — Admins only *@
+                @if (User.IsInRole("Admin"))
+                {
+                    <td>
+                        <!-- Edit Profile -->
+                        <a asp-action="EditProfile"
+                           asp-route-id="@u.Id"
+                           class="btn btn-sm btn-primary">
+                            Edit Profile
+                        </a>
+
+                        <!-- Manage Roles -->
+                        <a asp-action="EditRoles"
+                           asp-route-id="@u.Id"
+                           class="btn btn-sm btn-secondary ms-1">
+                            Manage Roles
+                        </a>
+
+                        <!-- Enable / Disable User -->
+                        <form asp-action="ToggleUser"
+                              method="post"
+                              style="display:inline;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@u.Id" />
+
+                            @if (u.IsDisabled)
+                            {
+                                <button type="submit"
+                                        class="btn btn-sm btn-success ms-1"
+                                        onclick="return confirm('Enable this user?');">
+                                    Enable
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="submit"
+                                        class="btn btn-sm btn-danger ms-1"
+                                        onclick="return confirm('Disable this user?');">
+                                    Disable
+                                </button>
+                            }
+                        </form>
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>

@@ -33,7 +33,6 @@
     }
 </ul>
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -48,18 +47,12 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 
     <style>
-        /* =========================
-                           PAGE BACKGROUND (CONTRAST)
-                        ========================== */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #e2e8f0;
             margin: 0;
         }
 
-        /* =========================
-                           SIDEBAR
-                        ========================== */
         .sidebar {
             width: 240px;
             height: 100vh;
@@ -91,9 +84,6 @@
                     color: #ffffff;
                 }
 
-        /* =========================
-                           APP FRAME (VISIBLE BORDER)
-                        ========================== */
         .app-frame {
             margin-left: 240px;
             min-height: calc(100vh - 36px);
@@ -104,16 +94,10 @@
             box-sizing: border-box;
         }
 
-        /* =========================
-                           MAIN CONTENT
-                        ========================== */
         .main {
             padding: 30px;
         }
 
-        /* =========================
-                           TOP BAR
-                        ========================== */
         .topbar {
             background: #ffffff;
             padding: 15px 25px;
@@ -135,7 +119,12 @@
         <a asp-controller="Students" asp-action="Index">Students</a>
         <a asp-controller="Advisor" asp-action="Index">Advisors</a>
         <a asp-controller="Tasks" asp-action="Index">Tasks</a>
-        <a asp-controller="Admin" asp-action="Index">Admin</a>
+
+        @* 🔐 Admin menu — Admins ONLY *@
+        @if (User.IsInRole("Admin"))
+        {
+            <a asp-controller="Admin" asp-action="Index">Admin</a>
+        }
     </div>
 
     <!-- App Frame -->
@@ -156,9 +145,3 @@
 
 </body>
 </html>
-
-
-
-
-
-

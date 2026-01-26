@@ -1,0 +1,47 @@
+﻿@model StudentTrackingCoach.Models.ViewModels.AdminEditRolesViewModel
+
+@{
+    ViewData["Title"] = "Manage Roles";
+}
+
+<h2>Manage Roles</h2>
+
+<p>
+    <strong>User:</strong> @Model.Email<br />
+    <strong>UserId:</strong> @Model.UserId
+</p>
+
+<hr />
+
+<form asp-action="EditRoles" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="UserId" />
+
+    <table border="1" cellpadding="6" cellspacing="0">
+        <thead>
+            <tr>
+                <th>Role</th>
+                <th>Assigned</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.Roles.Count; i++)
+            {
+                <tr>
+                    <td>
+                        @Model.Roles[i].RoleName
+                        <input type="hidden" asp-for="Roles[i].RoleName" />
+                    </td>
+                    <td>
+                        <input type="checkbox" asp-for="Roles[i].IsAssigned" />
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <br />
+
+    <button type="submit">Save Roles</button>
+    <a asp-action="Users" style="margin-left:10px;">Cancel</a>
+</form>

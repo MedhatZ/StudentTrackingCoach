@@ -5,15 +5,15 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using StudentTrackingCoach.Models;
+using StudentTrackingCoach.Data;
 
 #nullable disable
 
 namespace StudentTrackingCoach.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260111040955_CreateIdentitySchemaProper")]
-    partial class CreateIdentitySchemaProper
+    [Migration("20260123061449_AddAdvisorNotes")]
+    partial class AddAdvisorNotes
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -158,6 +158,34 @@ namespace StudentTrackingCoach.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("StudentTrackingCoach.Models.AdminAuditLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PerformedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TargetUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AdminAuditLogs", (string)null);
+                });
+
             modelBuilder.Entity("StudentTrackingCoach.Models.Advisor", b =>
                 {
                     b.Property<int>("AdvisorId")
@@ -172,46 +200,38 @@ namespace StudentTrackingCoach.Migrations
 
                     b.HasKey("AdvisorId");
 
-                    b.ToTable("Advisors", "dbo");
+                    b.ToTable("Advisor", "dbo");
                 });
 
-            modelBuilder.Entity("StudentTrackingCoach.Models.AdvisorRiskDashboardDto", b =>
+            modelBuilder.Entity("StudentTrackingCoach.Models.AdvisorNote", b =>
                 {
-                    b.Property<decimal>("AverageScore")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PrimaryRiskDriver")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RiskLevel")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("RiskScore")
-                        .HasColumnType("int");
-
-                    b.Property<string>("SecondaryRiskDriver")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("SnapshotDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("StudentID")
+                    b.Property<long>("AdvisorNoteId")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("bigint");
 
-                    b.ToTable((string)null);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AdvisorNoteId"));
 
-                    b.ToView("vw_AdvisorRiskDashboard", "analytics");
+                    b.Property<string>("ActionTaken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AdvisorUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("StudentId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("AdvisorNoteId");
+
+                    b.ToTable("AdvisorNotes");
                 });
 
             modelBuilder.Entity("StudentTrackingCoach.Models.ApplicationUser", b =>
@@ -220,6 +240,9 @@ namespace StudentTrackingCoach.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("AccessFailedCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("AdvisorId")
                         .HasColumnType("int");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -262,8 +285,8 @@ namespace StudentTrackingCoach.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<long?>("StudentId")
-                        .HasColumnType("bigint");
+                    b.Property<int?>("StudentId")
+                        .HasColumnType("int");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");
@@ -283,75 +306,6 @@ namespace StudentTrackingCoach.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
-                });
-
-            modelBuilder.Entity("StudentTrackingCoach.Models.DecisionAudit", b =>
-                {
-                    b.Property<long>("DecisionAuditId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("DecisionAuditId"));
-
-                    b.Property<string>("ActionTaken")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Decision")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DecisionDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Reason")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("StudentId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("DecisionAuditId");
-
-                    b.ToTable("DecisionAudits", "dbo");
-                });
-
-            modelBuilder.Entity("StudentTrackingCoach.Models.PendingAction", b =>
-                {
-                    b.Property<long>("ActionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ActionId"));
-
-                    b.Property<int?>("ActionTypeId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("Priority")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Reason")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long?>("StudentId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("ActionId");
-
-                    b.ToTable("PendingAction", "dbo");
                 });
 
             modelBuilder.Entity("StudentTrackingCoach.Models.Student", b =>
@@ -380,48 +334,6 @@ namespace StudentTrackingCoach.Migrations
                     b.HasKey("StudentId");
 
                     b.ToTable("Student", "dbo");
-                });
-
-            modelBuilder.Entity("StudentTrackingCoach.Models.StudentRiskNarrativeDto", b =>
-                {
-                    b.Property<string>("AdvisorNarrative")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("StudentID")
-                        .HasColumnType("bigint");
-
-                    b.ToTable((string)null);
-
-                    b.ToView("vw_StudentRiskNarrative", "analytics");
-                });
-
-            modelBuilder.Entity("StudentTrackingCoach.Models.SuccessStudentMyGradPath", b =>
-                {
-                    b.Property<string>("ActionNotes")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("AlertTitle")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DueDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ResolvedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("StudentID")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("StudentStatus")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.ToTable((string)null);
-
-                    b.ToView("vw_StudentMyGradPath", "success");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

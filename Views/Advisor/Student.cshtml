@@ -1,70 +1,203 @@
-﻿@model StudentTrackingCoach.Models.AdvisorRiskDashboardDto
+﻿@model StudentTrackingCoach.Models.ViewModels.AdvisorStudentDetailViewModel
 
 @{
-    ViewData["Title"] = "Student Risk Detail";
+    ViewData["Title"] = "Student Advisory Review";
 }
 
-<h2>@Model.FirstName @Model.LastName</h2>
-
-<hr />
-
-<div class="mb-3">
-    <strong>Risk Level:</strong>
-    <span class="badge @(Model.RiskLevel == "High" ? "bg-danger" :
-                                              Model.RiskLevel == "Medium" ? "bg-warning text-dark" :
-                                              "bg-success")">
-        @Model.RiskLevel
-    </span>
-</div>
-
-<div class="mb-3">
-    <strong>Average Score:</strong> @Model.AverageScore
-</div>
-
-<div class="mb-3">
-    <strong>Primary Risk Driver:</strong>
-    <p>@Model.PrimaryRiskDriver</p>
-</div>
-
-<div class="mb-3">
-    <strong>Recommended Action:</strong>
-    <p>@Model.SecondaryRiskDriver</p>
-</div>
-
-<hr />
-
-<h4>Advisor Narrative</h4>
-<hr />
-
-<h4>Advisor Action</h4>
-
-<form asp-action="LogDecision" method="post">
-    <!-- ✅ FIXED: StudentID → StudentId -->
-    <input type="hidden" name="StudentId" value="@Model.StudentId" />
-
-    <div class="mb-3">
-        <label class="form-label">Action Taken</label>
-        <select class="form-select" name="ActionTaken" required>
-            <option value="">-- Select Action --</option>
-            <option>Reached out to student</option>
-            <option>Scheduled advising meeting</option>
-            <option>Referred to tutoring services</option>
-            <option>Escalated to academic support</option>
-        </select>
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-1">@Model.StudentName</h2>
+        <div class="text-muted">
+            Student ID: <strong>@Model.StudentId</strong>
+            @if (!string.IsNullOrWhiteSpace(Model.EnrollmentStatus))
+            {
+                <span class="ms-3">Status: <strong>@Model.EnrollmentStatus</strong></span>
+            }
+        </div>
     </div>
 
-    <div class="mb-3">
-        <label class="form-label">Notes</label>
-        <textarea class="form-control" name="Notes" rows="3"></textarea>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        ← Back to Dashboard
+    </a>
+</div>
+
+<!-- ========================= -->
+<!-- RISK SUMMARY -->
+<!-- ========================= -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+                <div class="text-muted mb-1">Risk Level</div>
+                <span class="badge @(Model.RiskLevel == "High" ? "bg-danger" :
+                                                            Model.RiskLevel == "Medium" ? "bg-warning text-dark" :
+                                                            "bg-success")">
+                    @Model.RiskLevel
+                </span>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted mb-1">Average Score</div>
+                <div class="fw-semibold">@Model.AverageScore.ToString("0.0")</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted mb-1">Primary Risk Driver</div>
+                <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(Model.PrimaryRiskDriver) ? Model.PrimaryRiskDriver : "—")</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="text-muted mb-1">Recommended Action</div>
+                <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(Model.SecondaryRiskDriver) ? Model.SecondaryRiskDriver : "—")</div>
+            </div>
+        </div>
     </div>
+</div>
 
-    <button type="submit" class="btn btn-success">
-        Save Advisor Action
-    </button>
-</form>
+<!-- ========================= -->
+<!-- ADVISOR NOTES TIMELINE -->
+<!-- ========================= -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <h5 class="mb-0">Advisor Notes (Latest First)</h5>
+            <span class="badge bg-light text-dark">
+                Total Notes: @Model.Notes.Count
+            </span>
+        </div>
 
-<p>@ViewBag.Narrative</p>
+        @if (Model.Notes == null || !Model.Notes.Any())
+        {
+            <p class="text-muted mb-0"><em>No advisor notes yet for this student.</em></p>
+        }
+        else
+        {
+            <div class="list-group">
+                @foreach (var note in Model.Notes.OrderByDescending(n => n.CreatedAt))
+                {
+                    var badge = note.Severity switch
+                    {
+                        "High" => "bg-danger",
+                        "Medium" => "bg-warning text-dark",
+                        _ => "bg-success"
+                    };
 
-<a asp-action="Index" class="btn btn-secondary mt-3">
-    Back to Dashboard
-</a>
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="me-3">
+                                <div class="fw-semibold">@note.Title</div>
+                                <div class="text-muted small">
+                                    @note.CreatedAt.ToString("MM/dd/yyyy") • @note.CreatedBy
+                                </div>
+                            </div>
+                            <span class="badge @badge">@note.Severity</span>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(note.Notes))
+                        {
+                            <div class="mt-2">@note.Notes</div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ========================= -->
+<!-- ADD NEW NOTE -->
+<!-- ========================= -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="mb-3">Add New Advisor Note</h5>
+
+        <form asp-action="AddNote" method="post">
+            <input type="hidden" name="StudentId" value="@Model.StudentId" />
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Title</label>
+                    <input class="form-control" name="Title" maxlength="120" required />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Severity</label>
+                    <select class="form-select" name="Severity" required>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" name="Category" required>
+                        <option value="Academic">Academic</option>
+                        <option value="Attendance">Attendance</option>
+                        <option value="Behavior">Behavior</option>
+                        <option value="Engagement">Engagement</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Note</label>
+                    <textarea class="form-control" name="Note" rows="4" placeholder="Write advisor note here..."></textarea>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">
+                    Save Note
+                </button>
+                <span class="text-muted ms-2 small">
+                    (This is presentation-ready — we can persist to DB next.)
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================= -->
+<!-- OPTIONAL: ADVISOR ACTION LOG (PHASE 2 READY) -->
+<!-- ========================= -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="mb-3">Advisor Action (Optional)</h5>
+
+        <form asp-action="LogDecision" method="post">
+            <input type="hidden" name="StudentId" value="@Model.StudentId" />
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Action Taken</label>
+                    <select class="form-select" name="ActionTaken" required>
+                        <option value="">-- Select Action --</option>
+                        <option>Reached out to student</option>
+                        <option>Scheduled advising meeting</option>
+                        <option>Referred to tutoring services</option>
+                        <option>Escalated to academic support</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Notes (optional)</label>
+                    <input class="form-control" name="Notes" maxlength="250" />
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-success">
+                    Save Advisor Action
+                </button>
+            </div>
+        </form>
+
+        @if (!string.IsNullOrWhiteSpace(ViewBag.Narrative as string))
+        {
+            <div class="alert alert-info mt-3 mb-0">
+                @ViewBag.Narrative
+            </div>
+        }
+    </div>
+</div>

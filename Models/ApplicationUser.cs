@@ -4,12 +4,15 @@ namespace StudentTrackingCoach.Models
 {
     public class ApplicationUser : IdentityUser
     {
-        // Link Identity user → Student
-        public long? StudentId { get; set; }
+        // ==============================
+        // DOMAIN LINKING (MATCH DB TYPES)
+        // ==============================
 
-        // Link Identity user → Advisor
+        // These MUST be int? because SQL columns are INT
+        public int? StudentId { get; set; }
         public int? AdvisorId { get; set; }
 
+        // Optional future expansion
         public int? InstitutionId { get; set; }
     }
 }

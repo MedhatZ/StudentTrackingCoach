@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StudentTrackingCoach.Data;
 
@@ -11,9 +12,11 @@ using StudentTrackingCoach.Data;
 namespace StudentTrackingCoach.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260119052816_BaselineIdentity")]
+    partial class BaselineIdentity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -180,7 +183,7 @@ namespace StudentTrackingCoach.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AdminAuditLogs", (string)null);
+                    b.ToTable("AdminAuditLogs");
                 });
 
             modelBuilder.Entity("StudentTrackingCoach.Models.Advisor", b =>
@@ -197,38 +200,7 @@ namespace StudentTrackingCoach.Migrations
 
                     b.HasKey("AdvisorId");
 
-                    b.ToTable("Advisor", "dbo");
-                });
-
-            modelBuilder.Entity("StudentTrackingCoach.Models.AdvisorNote", b =>
-                {
-                    b.Property<long>("AdvisorNoteId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AdvisorNoteId"));
-
-                    b.Property<string>("ActionTaken")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("AdvisorUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("StudentId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("AdvisorNoteId");
-
-                    b.ToTable("AdvisorNotes");
+                    b.ToTable("Advisors");
                 });
 
             modelBuilder.Entity("StudentTrackingCoach.Models.ApplicationUser", b =>

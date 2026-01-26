@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using StudentTrackingCoach.Data;          // ✅ REQUIRED
 using StudentTrackingCoach.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,7 +27,7 @@ builder.Services
     .AddDefaultTokenProviders()
     .AddDefaultUI();
 
-// 🔐 COOKIE CONFIG (THIS FIXES LOGOUT + ACCESS DENIED)
+// 🔐 COOKIE CONFIG (FIXES LOGOUT + ACCESS DENIED)
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Identity/Account/Login";
@@ -68,5 +69,65 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.MapRazorPages(); // REQUIRED for Identity UI
+
+// ======================================================
+// 🔥 DEMO DATA SEEDING (SAFE — DEV ONLY)
+// ======================================================
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var services = scope.ServiceProvider;
+
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+
+        // -------------------------------
+        // SEED ADVISORS
+        // -------------------------------
+        if (!context.Advisor.Any())
+        {
+            context.Advisor.AddRange(
+                new Advisor { Name = "Dr. Angela Morris" },
+                new Advisor { Name = "Prof. James Carter" }
+            );
+            context.SaveChanges();
+        }
+
+        // -------------------------------
+        // SEED STUDENTS
+        // -------------------------------
+        if (!context.Students.Any())
+        {
+            context.Students.AddRange(
+                new Student
+                {
+                    StudentId = 100001,
+                    InstitutionId = 1,
+                    EnrollmentStatus = "Active",
+                    IsFirstGen = true,
+                    IsWorking = false,
+                    PreferredModality = "In-Person",
+                    CreatedAt = DateTime.UtcNow.AddMonths(-6)
+                },
+                new Student
+                {
+                    StudentId = 100002,
+                    InstitutionId = 1,
+                    EnrollmentStatus = "Probation",
+                    IsFirstGen = false,
+                    IsWorking = true,
+                    PreferredModality = "Online",
+                    CreatedAt = DateTime.UtcNow.AddMonths(-3)
+                }
+            );
+            context.SaveChanges();
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Demo data seeding failed: {ex.Message}");
+    }
+}
 
 app.Run();

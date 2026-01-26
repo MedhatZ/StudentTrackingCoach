@@ -1,0 +1,74 @@
+﻿@model StudentTrackingCoach.Models.ViewModels.AdminEditProfileViewModel
+
+@{
+    ViewData["Title"] = "Manage Profile";
+}
+
+<h2>Manage Profile</h2>
+
+<p>
+    <strong>Email:</strong> @Model.Email<br />
+    <strong>UserId:</strong> @Model.UserId
+</p>
+
+<hr />
+
+<form asp-action="EditProfile" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="UserId" />
+
+    <table border="1" cellpadding="6" cellspacing="0">
+        <tr>
+            <th>StudentId</th>
+            <td>
+                @if (Model.CanEditStudent)
+                {
+                    <input type="number"
+                           asp-for="StudentId"
+                           class="form-control" />
+                }
+                else
+                {
+                    <input type="text"
+                           value="@(Model.StudentId?.ToString() ?? "-")"
+                           class="form-control"
+                           disabled />
+                }
+            </td>
+        </tr>
+
+        <tr>
+            <th>AdvisorId</th>
+            <td>
+                @if (Model.CanEditAdvisor)
+                {
+                    <input type="number"
+                           asp-for="AdvisorId"
+                           class="form-control" />
+                }
+                else
+                {
+                    <input type="text"
+                           value="@(Model.AdvisorId?.ToString() ?? "-")"
+                           class="form-control"
+                           disabled />
+                }
+            </td>
+        </tr>
+
+        <tr>
+            <th>Roles</th>
+            <td>
+                <input type="text"
+                       value="@string.Join(", ", Model.Roles)"
+                       class="form-control"
+                       disabled />
+            </td>
+        </tr>
+    </table>
+
+    <br />
+
+    <button type="submit" class="btn btn-primary">Save Profile</button>
+    <a asp-action="Users" class="btn btn-secondary ms-2">Cancel</a>
+</form>

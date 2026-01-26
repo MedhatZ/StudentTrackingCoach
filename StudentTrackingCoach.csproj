@@ -5,9 +5,6 @@
 	  <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-  <ItemGroup>
-    <None Include="Models\ApplicationDbContext.cs" />
-  </ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
@@ -27,6 +24,7 @@
 
 
 	<ItemGroup>
+    <Folder Include="Migrations\" />
     <Folder Include="Views\Details.cshtml\" />
   </ItemGroup>
 

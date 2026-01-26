@@ -2,56 +2,106 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using StudentTrackingCoach.Data;
 using StudentTrackingCoach.Models;
+using StudentTrackingCoach.Models.ViewModels;
 
 namespace StudentTrackingCoach.Controllers
 {
-    [Authorize(Roles = "Advisor,Admin")]
+    [Authorize]
     public class AdvisorController : Controller
     {
-        private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ApplicationDbContext _db;
 
-        public AdvisorController(
-            ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
+        public AdvisorController(UserManager<ApplicationUser> userManager, ApplicationDbContext db)
         {
-            _context = context;
             _userManager = userManager;
+            _db = db;
         }
 
+        // ===============================
+        // GET: /Advisor
+        // ===============================
         public async Task<IActionResult> Index()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-                return Challenge();
+            var students = await _db.Students
+                .AsNoTracking()
+                .Take(10)
+                .Select(s => new AdvisorRiskDashboardDto
+                {
+                    StudentId = s.StudentId,
+                    FirstName = "Student",
+                    LastName = s.StudentId.ToString(),
+                    RiskLevel = "High",
+                    AverageScore = 62,
+                    PrimaryRiskDriver = "Failing one or more assessments",
+                    SecondaryRiskDriver = "Low engagement"
+                })
+                .ToListAsync();
 
-            // ✅ ADMIN OVERRIDE
-            if (User.IsInRole("Admin"))
+            return View(students);
+        }
+
+        // ===============================
+        // GET: /Advisor/Student/{id}
+        // ===============================
+        public async Task<IActionResult> Student(long id)
+        {
+            var notes = await _db.AdvisorNotes
+                .AsNoTracking()
+                .Where(n => n.StudentId == id)
+                .OrderByDescending(n => n.CreatedAt)
+                .ToListAsync();
+
+            var vm = new AdvisorStudentDetailViewModel
             {
-                var dashboard = await _context.AdvisorRiskDashboard
-                    .OrderBy(d => d.StudentId)
-                    .ToListAsync();
+                StudentId = id,
+                StudentName = $"Student {id}",
+                EnrollmentStatus = "Enrolled",
 
-                return View(dashboard);
-            }
+                RiskLevel = "High",
+                AverageScore = 62,
+                PrimaryRiskDriver = "Failing one or more assessments",
+                SecondaryRiskDriver = "Low engagement",
 
-            // 🔐 Advisor-only logic
-            if (!user.AdvisorId.HasValue)
-                return Forbid();
+                Notes = notes.Select(n => new AdvisorNoteViewModel
+                {
+                    
+                    Notes = n.Notes,
+                    CreatedBy = n.AdvisorUserId,
+                    CreatedAt = n.CreatedAt
+                }).ToList()
+            };
 
-            int advisorId = user.AdvisorId.Value;
+            return View(vm);
+        }
 
-            var assignedStudentIds = await _context.AdvisorStudents
-                .Where(a => a.AdvisorId == advisorId)
-                .Select(a => a.StudentId)
-                .ToListAsync();
+        // ===============================
+        // POST: /Advisor/LogNote
+        // ===============================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> LogNote(AdvisorNoteInputModel input)
+        {
+            if (!ModelState.IsValid)
+                return RedirectToAction(nameof(Student), new { id = input.StudentId });
 
-            var advisorDashboard = await _context.AdvisorRiskDashboard
-                .Where(d => assignedStudentIds.Contains(d.StudentId))
-                .ToListAsync();
+            var user = await _userManager.GetUserAsync(User);
 
-            return View(advisorDashboard);
+            var note = new AdvisorNote
+            {
+                StudentId = input.StudentId,
+                AdvisorUserId = user?.UserName ?? "Advisor",
+                ActionTaken = input.ActionTaken,
+                Notes = input.Notes,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.AdvisorNotes.Add(note);
+            await _db.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Student), new { id = input.StudentId });
         }
     }
 }

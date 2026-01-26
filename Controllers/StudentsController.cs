@@ -2,70 +2,75 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using StudentTrackingCoach.Data;
 using StudentTrackingCoach.Models;
 using StudentTrackingCoach.Models.ViewModels;
 
 namespace StudentTrackingCoach.Controllers
 {
+    [Authorize]
     public class StudentsController : Controller
     {
-        private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ApplicationDbContext _db;
 
         public StudentsController(
-            ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            ApplicationDbContext db)
         {
-            _context = context;
             _userManager = userManager;
+            _db = db;
         }
 
-        // =====================================================
-        // ADVISOR / ADMIN — STUDENT LIST
-        // =====================================================
-        [Authorize(Roles = "Advisor,Admin")]
+        // ===============================
+        // GET: /Students
+        // ===============================
+        // ===============================
+        // GET: /Students
+        // ===============================
         public async Task<IActionResult> Index(bool highRiskOnly = false)
         {
-            var studentsQuery = _context.Students
+            var query = _db.Students
+                .AsNoTracking()
                 .Select(s => new StudentListViewModel
                 {
                     StudentId = s.StudentId,
+                    InstitutionId = s.InstitutionId,
                     EnrollmentStatus = s.EnrollmentStatus,
                     IsFirstGen = s.IsFirstGen,
                     IsWorking = s.IsWorking,
                     PreferredModality = s.PreferredModality,
                     CreatedAt = s.CreatedAt,
 
-                    HasOpenPendingActions = _context.PendingActions
-                        .Any(p => p.StudentId == s.StudentId && p.Status != "Completed"),
-
+                    // 🔥 DEMO RISK LOGIC (TEMP — AI later)
                     RiskPriority =
-                        _context.PendingActions.Any(p => p.StudentId == s.StudentId && p.Status != "Completed")
-                            ? 1
-                            : (!s.IsFirstGen.HasValue || !s.IsWorking.HasValue ? 2 : 3)
+                        s.IsFirstGen == true && s.IsWorking == false ? 1 :   // High
+                        s.IsFirstGen == true || s.IsWorking == false ? 2 :   // Medium
+                        3,                                                    // Low
+
+                    HasOpenPendingActions =
+                        s.IsFirstGen == true && s.IsWorking == false
                 });
 
             if (highRiskOnly)
             {
-                studentsQuery = studentsQuery.Where(s => s.HasOpenPendingActions);
+                query = query.Where(s => s.RiskPriority == 1);
             }
 
-            var students = await studentsQuery
-                .OrderBy(s => s.RiskPriority)
-                .ThenBy(s => s.StudentId)
-                .ToListAsync();
+            var students = await query.ToListAsync();
 
             ViewBag.HighRiskOnly = highRiskOnly;
+
             return View(students);
         }
 
-        // =====================================================
-        // ADVISOR / ADMIN — STUDENT DETAILS
-        // =====================================================
-        [Authorize(Roles = "Advisor,Admin")]
+        // ===============================
+        // GET: /Students/Details/{id}
+        // ===============================
         public async Task<IActionResult> Details(long id)
         {
-            var student = await _context.Students
+            var student = await _db.Students
+                .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.StudentId == id);
 
             if (student == null)
@@ -74,103 +79,63 @@ namespace StudentTrackingCoach.Controllers
             return View(student);
         }
 
-        // =====================================================
-        // STUDENT / ADMIN — MY GRAD PATH
-        // =====================================================
-        [Authorize(Roles = "Student,Admin")]
-        public async Task<IActionResult> MyGradPath(long? studentId = null)
+        // ===============================
+        // GET: /Students/MyGradPath
+        // ===============================
+        public async Task<IActionResult> MyGradPath()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-                return Challenge();
+            // DEMO MODE: Pull first student so the page always renders with data
+            var student = await _db.Students
+                .AsNoTracking()
+                .FirstOrDefaultAsync();
 
-            long resolvedStudentId;
-
-            // =====================================================
-            // ADMIN FALLBACK (DEV / DEMO SAFE)
-            // =====================================================
-            if (User.IsInRole("Admin"))
+            if (student == null)
             {
-                if (studentId.HasValue)
+                return View(new StudentMyGradPathViewModel
                 {
-                    resolvedStudentId = studentId.Value;
-                }
-                else
-                {
-                    // 🔥 Default Admin to first available student
-                    resolvedStudentId = await _context.Students
-                        .OrderBy(s => s.StudentId)
-                        .Select(s => s.StudentId)
-                        .FirstAsync();
-                }
-            }
-            else
-            {
-                // =================================================
-                // STUDENT — STRICT MODE
-                // =================================================
-                if (!user.StudentId.HasValue)
-                    return Forbid();
-
-                resolvedStudentId = user.StudentId.Value;
+                    CurrentFocusMessage = "No student records found."
+                });
             }
 
-            var model = new StudentMyGradPathViewModel
+            var vm = new StudentMyGradPathViewModel
             {
-                StudentId = resolvedStudentId,
-                StudentName = $"Student {resolvedStudentId}"
+                StudentId = student.StudentId,
+                StudentName = $"Student #{student.StudentId}",
+                OverallStatus = "At Risk",
+                CurrentFocusMessage = "Attendance and Math performance require attention.",
+
+                AdvisorName = "Advisor A",
+                AdvisorLastAction = "Academic check-in scheduled",
+                AdvisorLastContactDate = DateTime.Today.AddDays(-2),
+
+                ActiveItems =
+                {
+                    new StudentMyGradPathItemViewModel
+                    {
+                        AlertTitle = "Low Attendance",
+                        ActionNotes = "Missed 3 classes in the last 2 weeks",
+                        DueDate = DateTime.Today.AddDays(5)
+                    },
+                    new StudentMyGradPathItemViewModel
+                    {
+                        AlertTitle = "Math Exam Below Passing",
+                        ActionNotes = "Score: 62%. Tutoring recommended.",
+                        DueDate = DateTime.Today.AddDays(7)
+                    }
+                },
+
+                CompletedItems =
+                {
+                    new StudentMyGradPathItemViewModel
+                    {
+                        AlertTitle = "Advisor Intake Completed",
+                        ActionNotes = "Initial onboarding meeting completed",
+                        ResolvedAt = DateTime.Today.AddDays(-10)
+                    }
+                }
             };
 
-            var gradPathRows = await _context
-                .Set<SuccessStudentMyGradPath>()
-                .FromSqlRaw(
-                    "SELECT * FROM success.vw_StudentMyGradPath WHERE StudentID = @p0",
-                    resolvedStudentId)
-                .ToListAsync();
-
-            model.ActiveItems = gradPathRows
-                .Where(r => r.StudentStatus != "Completed")
-                .Select(r => new GradPathItem
-                {
-                    AlertTitle = r.AlertTitle,
-                    ActionNotes = r.ActionNotes,
-                    DueDate = r.DueDate
-                })
-                .ToList();
-
-            model.CompletedItems = gradPathRows
-                .Where(r => r.StudentStatus == "Completed")
-                .OrderByDescending(r => r.ResolvedAt)
-                .Select(r => new GradPathItem
-                {
-                    AlertTitle = r.AlertTitle,
-                    ActionNotes = r.ActionNotes,
-                    ResolvedAt = r.ResolvedAt
-                })
-                .ToList();
-
-            model.OverallStatus = model.ActiveItems.Any()
-                ? "Needs Attention"
-                : "On Track";
-
-            model.CurrentFocusMessage = model.ActiveItems.Any()
-                ? "You have an item that needs attention. Review the next steps below and stay on track."
-                : "You are currently on track. Keep going!";
-
-            model.AdvisorName = "Assigned Academic Advisor";
-
-            if (model.CompletedItems.Any())
-            {
-                var lastCompleted = model.CompletedItems.First();
-                model.AdvisorLastAction = lastCompleted.ActionNotes;
-                model.AdvisorLastContactDate = lastCompleted.ResolvedAt;
-            }
-            else
-            {
-                model.AdvisorLastAction = "Your advisor is monitoring your progress.";
-            }
-
-            return View(model);
+            return View(vm);
         }
     }
 }

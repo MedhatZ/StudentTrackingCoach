@@ -6,7 +6,6 @@
 
 <h2 class="mb-4">Advisor Dashboard</h2>
 
-<!-- STUDENTS REQUIRING ATTENTION -->
 <div class="card shadow-sm">
     <div class="card-body">
         <h5 class="mb-3">Students Requiring Attention</h5>
@@ -41,10 +40,10 @@
 
                         <tr>
                             <td>
-                                <a asp-controller="Advisor"
-                                   asp-action="Student"
+                                <a asp-controller="Students"
+                                   asp-action="Details"
                                    asp-route-id="@student.StudentId">
-                                    @student.FirstName @student.LastName
+                                    Student @student.StudentId
                                 </a>
                             </td>
 
