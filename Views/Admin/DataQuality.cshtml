@@ -1,0 +1,65 @@
+@model StudentTrackingCoach.Models.ViewModels.AdminDataQualityViewModel
+
+<h2>Data Quality Report</h2>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Total Students</h5>
+                <h3>@Model.TotalStudents</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">With Notes</h5>
+                <h3>@Model.StudentsWithNotes</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body">
+                <h5 class="card-title">High Risk</h5>
+                <h3>@Model.HighRiskStudents</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Medium Risk</h5>
+                <h3>@Model.MediumRiskStudents</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h4>Students with Data Issues</h4>
+
+@if (!Model.StudentsWithIssues.Any())
+{
+    <p class="text-muted">No data issues found.</p>
+}
+else
+{
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Student ID</th>
+                <th>Issue</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var issue in Model.StudentsWithIssues)
+            {
+                <tr>
+                    <td>@issue.StudentId</td>
+                    <td>@issue.Issue</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace StudentTrackingCoach.Models.ViewModels
@@ -26,6 +26,7 @@ namespace StudentTrackingCoach.Models.ViewModels
         public string? AdvisorNotes { get; set; }
 
         // 🔹 Accountability
+        public DateTime? CreatedAt { get; set; }
         public DateTime? FollowUpDate { get; set; }
         public string? ExpectedOutcome { get; set; }
     }

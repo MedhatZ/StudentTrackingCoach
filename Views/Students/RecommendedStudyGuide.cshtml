@@ -1,4 +1,4 @@
-﻿@model StudentTrackingCoach.Models.ViewModels.RecommendedStudyGuideViewModel
+@model StudentTrackingCoach.Models.ViewModels.RecommendedStudyGuideViewModel
 
 @{
     ViewData["Title"] = "Recommended Study Guide";
@@ -14,6 +14,40 @@
             <form asp-action="SaveStudyGuide" method="post">
 
                 <input type="hidden" asp-for="StudentId" />
+
+                @{
+                    // Determine risk level from data
+                    var riskLevel = ViewBag.RiskLevel ?? "Low";
+                    var riskClass = riskLevel == "High" ? "bg-danger" :
+                                    riskLevel == "Medium" ? "bg-warning" : "bg-success";
+                }
+
+                <!-- Risk Banner -->
+                <div class="alert @(riskLevel == "High" ? "alert-danger" :
+                                    riskLevel == "Medium" ? "alert-warning" : "alert-info") mb-4">
+                    <strong>Risk Level: @riskLevel</strong> -
+                    This study guide is personalized based on current academic standing.
+                </div>
+
+                <!-- Risk Drivers Summary -->
+                <div class="card bg-light mb-4">
+                    <div class="card-body">
+                        <h6 class="card-title">Why this student needs support:</h6>
+                        <ul class="mb-0">
+                            @if (ViewBag.RiskDrivers != null)
+                            {
+                                foreach (var driver in ViewBag.RiskDrivers)
+                                {
+                                    <li>@driver</li>
+                                }
+                            }
+                            else
+                            {
+                                <li>Risk factors identified</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
 
                 <div class="row mb-3">
                     <div class="col-md-6">
@@ -32,29 +66,35 @@
 
                 <hr />
 
+                <!-- Focus Areas - make it readonly since it's AI-generated -->
                 <div class="mb-3">
-                    <label class="form-label">Primary Areas to Focus On</label>
-                    <textarea asp-for="FocusAreas" class="form-control" rows="3"></textarea>
+                    <label class="form-label fw-bold">Primary Areas to Focus On</label>
+                    <textarea asp-for="FocusAreas" class="form-control" rows="3" readonly></textarea>
+                    <small class="text-muted">Generated based on risk factors</small>
                 </div>
 
+                <!-- Study Schedule - editable by advisor -->
                 <div class="mb-3">
-                    <label class="form-label">Recommended Weekly Study Schedule</label>
+                    <label class="form-label fw-bold">Recommended Weekly Study Schedule</label>
                     <textarea asp-for="StudySchedule" class="form-control" rows="3"></textarea>
                 </div>
 
+                <!-- Study Techniques - editable -->
                 <div class="mb-3">
-                    <label class="form-label">Study Techniques</label>
+                    <label class="form-label fw-bold">Study Techniques</label>
                     <textarea asp-for="StudyTechniques" class="form-control" rows="3"></textarea>
                 </div>
 
+                <!-- Resources - editable -->
                 <div class="mb-3">
-                    <label class="form-label">Recommended Resources</label>
+                    <label class="form-label fw-bold">Recommended Resources</label>
                     <textarea asp-for="Resources" class="form-control" rows="3"></textarea>
                 </div>
 
+                <!-- Advisor Notes - show from database -->
                 <div class="mb-3">
-                    <label class="form-label">Advisor Notes</label>
-                    <textarea asp-for="AdvisorNotes" class="form-control" rows="3"></textarea>
+                    <label class="form-label fw-bold">Recent Advisor Notes</label>
+                    <textarea asp-for="AdvisorNotes" class="form-control bg-light" rows="3" readonly></textarea>
                 </div>
 
                 <div class="row mb-4">

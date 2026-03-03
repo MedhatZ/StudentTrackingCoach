@@ -1,37 +1,6 @@
-﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
-
-<ul class="navbar-nav ms-auto">
-    @if (SignInManager.IsSignedIn(User))
-    {
-        <li class="nav-item">
-            <span class="nav-link text-muted">
-                Hello @User.Identity?.Name
-            </span>
-        </li>
-        <li class="nav-item">
-            <form asp-area="Identity"
-                  asp-page="/Account/Logout"
-                  method="post"
-                  class="form-inline">
-                <button type="submit" class="btn btn-link nav-link">
-                    Logout
-                </button>
-            </form>
-        </li>
-    }
-    else
-    {
-        <li class="nav-item">
-            <a class="nav-link"
-               asp-area="Identity"
-               asp-page="/Account/Login">
-                Login
-            </a>
-        </li>
-    }
-</ul>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -54,7 +23,7 @@
         }
 
         .sidebar {
-            width: 240px;
+            width: 260px;
             height: 100vh;
             background: #0d1b2a;
             color: #ffffff;
@@ -63,85 +32,148 @@
             left: 0;
             padding: 20px;
             z-index: 10;
+            overflow-y: auto;
         }
 
-            .sidebar h4 {
-                font-weight: 600;
-                margin-bottom: 30px;
-            }
+        .sidebar h4 {
+            font-weight: 600;
+            margin-bottom: 30px;
+            color: white;
+        }
 
-            .sidebar a {
-                display: block;
-                color: #cbd5e1;
-                text-decoration: none;
-                padding: 10px 12px;
-                border-radius: 6px;
-                margin-bottom: 4px;
-            }
+        .sidebar a {
+            display: block;
+            color: #cbd5e1;
+            text-decoration: none;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            transition: all 0.2s;
+        }
 
-                .sidebar a:hover {
-                    background: #1b263b;
-                    color: #ffffff;
-                }
+        .sidebar a:hover {
+            background: #1b263b;
+            color: #ffffff;
+        }
+
+        .sidebar .menu-section {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6c757d;
+            padding-left: 12px;
+        }
 
         .app-frame {
-            margin-left: 240px;
-            min-height: calc(100vh - 36px);
+            margin-left: 260px;
+            min-height: 100vh;
             background-color: #f8fafc;
-            border-top: 18px solid #0d1b2a;
-            border-right: 18px solid #0d1b2a;
-            border-bottom: 18px solid #0d1b2a;
-            box-sizing: border-box;
+        }
+
+        .topbar {
+            background: #ffffff;
+            padding: 12px 25px;
+            border-radius: 0;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-name {
+            font-weight: 500;
+            color: #0d1b2a;
+        }
+
+        .logout-btn {
+            background: none;
+            border: 1px solid #dc3545;
+            color: #dc3545;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: #dc3545;
+            color: white;
         }
 
         .main {
             padding: 30px;
         }
-
-        .topbar {
-            background: #ffffff;
-            padding: 15px 25px;
-            border-radius: 10px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-        }
     </style>
 </head>
 
 <body>
-
     <!-- Sidebar -->
     <div class="sidebar">
         <h4>Grad Path</h4>
 
-        <a asp-controller="Home" asp-action="Index">Dashboard</a>
-        <a asp-controller="Students" asp-action="MyGradPath">My Grad Path</a>
-        <a asp-controller="Students" asp-action="Index">Students</a>
-        <a asp-controller="Advisor" asp-action="Index">Advisors</a>
-        <a asp-controller="Tasks" asp-action="Index">Tasks</a>
+        <div class="menu-section">MAIN</div>
+        <a asp-controller="Home" asp-action="Index">📊 Dashboard</a>
+        <a asp-controller="Students" asp-action="MyGradPath">🎓 My Grad Path</a>
+        
+        <div class="menu-section">STUDENTS</div>
+        <a asp-controller="Students" asp-action="Index">👥 All Students</a>
+        <a asp-controller="Advisor" asp-action="Index">📋 Advisor View</a>
+        
+        <div class="menu-section">TASKS & REVIEWS</div>
+        <a asp-controller="Tasks" asp-action="Index">✅ Tasks</a>
+        <a asp-controller="Advisor" asp-action="PendingReviews">⏳ Pending Reviews</a>
+        <a asp-controller="Students" asp-action="MyStudyGuides">📚 My Study Guides</a>
 
-        @* 🔐 Admin menu — Admins ONLY *@
         @if (User.IsInRole("Admin"))
         {
-            <a asp-controller="Admin" asp-action="Index">Admin</a>
+            <div class="menu-section">ADMIN</div>
+            <a asp-controller="Admin" asp-action="Users">👤 Manage Users</a>
+            <a asp-controller="Admin" asp-action="DataQuality">📊 Data Quality</a>
         }
     </div>
 
     <!-- App Frame -->
     <div class="app-frame">
-        <div class="main">
-
-            <div class="topbar d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">@ViewData["Title"]</h5>
-                <span class="text-muted">Grad Path Platform</span>
+        <!-- Top Bar with User Info and Logout -->
+        <div class="topbar">
+            <h5 class="mb-0">@ViewData["Title"]</h5>
+            
+            <div class="user-info">
+                @if (SignInManager.IsSignedIn(User))
+                {
+                    <span class="user-name">
+                        👋 @User.Identity?.Name
+                    </span>
+                    <form asp-area="Identity" asp-page="/Account/Logout" method="post" class="m-0">
+                        <button type="submit" class="logout-btn">
+                            Logout
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <a class="btn btn-primary btn-sm" asp-area="Identity" asp-page="/Account/Login">
+                        Login
+                    </a>
+                }
             </div>
+        </div>
 
+        <!-- Main Content -->
+        <div class="main">
             @RenderBody()
-
         </div>
     </div>
 
     @RenderSection("Scripts", required: false)
-
 </body>
 </html>

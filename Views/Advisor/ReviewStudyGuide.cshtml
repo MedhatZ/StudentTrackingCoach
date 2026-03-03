@@ -1,0 +1,111 @@
+@model StudentTrackingCoach.Models.ViewModels.RecommendedStudyGuideViewModel
+@{
+    var intervention = ViewBag.Intervention as StudentTrackingCoach.Models.Intervention;
+    ViewData["Title"] = "Review Study Guide";
+}
+
+<h2>Review Study Guide</h2>
+
+<div class="row mb-3">
+    <div class="col">
+        <span class="badge bg-info">Student: @Model.StudentName</span>
+        <span class="badge bg-warning">Status: @intervention?.Status</span>
+        <span class="badge bg-secondary">Created: @intervention?.CreatedAt.ToString("MM/dd/yyyy HH:mm")</span>
+    </div>
+</div>
+
+<form asp-action="ReviewStudyGuide" method="post">
+    <input type="hidden" name="id" value="@intervention?.Id" />
+    <input type="hidden" asp-for="StudentId" />
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">Student Information</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Name:</strong> @Model.StudentName</p>
+                    <p><strong>Course:</strong> @Model.CourseName</p>
+                    <p><strong>Current Grade:</strong> @Model.CurrentGrade</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header bg-warning">
+                    <h6 class="mb-0">Follow-up Plan</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Follow-up Date:</strong> @(Model.FollowUpDate?.ToString("MM/dd/yyyy") ?? "Not set")</p>
+                    <p><strong>Expected Outcome:</strong> @Model.ExpectedOutcome</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header bg-secondary text-white">
+            <h6 class="mb-0">Focus Areas</h6>
+        </div>
+        <div class="card-body">
+            <textarea asp-for="FocusAreas" class="form-control" rows="3"></textarea>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header bg-secondary text-white">
+            <h6 class="mb-0">Study Schedule</h6>
+        </div>
+        <div class="card-body">
+            <textarea asp-for="StudySchedule" class="form-control" rows="4"></textarea>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header bg-secondary text-white">
+            <h6 class="mb-0">Study Techniques</h6>
+        </div>
+        <div class="card-body">
+            <textarea asp-for="StudyTechniques" class="form-control" rows="4"></textarea>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header bg-secondary text-white">
+            <h6 class="mb-0">Resources</h6>
+        </div>
+        <div class="card-body">
+            <textarea asp-for="Resources" class="form-control" rows="3"></textarea>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header bg-secondary text-white">
+            <h6 class="mb-0">Advisor Notes</h6>
+        </div>
+        <div class="card-body">
+            <textarea asp-for="AdvisorNotes" class="form-control" rows="3"></textarea>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col text-end">
+            <button type="submit" name="action" value="reject" class="btn btn-danger"
+                    onclick="return confirm('Reject this study guide?')">
+                ❌ Reject
+            </button>
+
+            <button type="submit" name="action" value="modify" class="btn btn-warning">
+                ✏️ Save Modifications
+            </button>
+
+            <button type="submit" name="action" value="approve" class="btn btn-success">
+                ✅ Approve & Send to Student
+            </button>
+
+            <a asp-action="PendingReviews" class="btn btn-secondary">Cancel</a>
+        </div>
+    </div>
+</form>

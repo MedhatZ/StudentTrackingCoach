@@ -1,0 +1,60 @@
+@model List<StudentTrackingCoach.Models.ViewModels.RecommendedStudyGuideViewModel>
+@{
+    ViewData["Title"] = "My Study Guides";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">My Study Guides</h2>
+    <span class="badge bg-success fs-6">Approved: @ViewBag.ApprovedCount</span>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(ViewBag.ErrorMessage))
+{
+    <div class="alert alert-warning">
+        @ViewBag.ErrorMessage
+    </div>
+}
+
+@if (!Model.Any())
+{
+    @if (string.IsNullOrWhiteSpace(ViewBag.ErrorMessage))
+    {
+        <div class="alert alert-warning">
+            No approved study guides found.
+        </div>
+    }
+}
+else
+{
+    foreach (var guide in Model)
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Study Guide</h5>
+            </div>
+            <div class="card-body">
+                <h6>🎯 Focus Areas</h6>
+                <p>@Html.Raw((guide.FocusAreas ?? string.Empty).Replace("\n", "<br />"))</p>
+                
+                <h6>📅 Schedule</h6>
+                <p>@Html.Raw((guide.StudySchedule ?? string.Empty).Replace("\n", "<br />"))</p>
+                
+                <h6>📚 Techniques</h6>
+                <p>@Html.Raw((guide.StudyTechniques ?? string.Empty).Replace("\n", "<br />"))</p>
+
+                @if (!string.IsNullOrEmpty(guide.Resources))
+                {
+                    <h6>📎 Resources</h6>
+                    <p>@Html.Raw((guide.Resources ?? string.Empty).Replace("\n", "<br />"))</p>
+                }
+
+                @if (guide.FollowUpDate.HasValue)
+                {
+                    <div class="alert alert-light mb-0 mt-3">
+                        <strong>Follow-up date:</strong> @guide.FollowUpDate.Value.ToString("MMM dd, yyyy")
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}

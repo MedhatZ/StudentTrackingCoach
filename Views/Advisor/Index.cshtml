@@ -1,7 +1,15 @@
-﻿@model IEnumerable<StudentTrackingCoach.Models.AdvisorRiskDashboardDto>
+@model IEnumerable<StudentTrackingCoach.Models.AdvisorRiskDashboardDto>
 
 @{
     ViewData["Title"] = "Advisor Dashboard";
+    var pagination = ViewBag.Pagination as StudentTrackingCoach.Models.ViewModels.PaginationViewModel;
+    var selectedPageSize = (int?)ViewBag.PageSize ?? 20;
+    var startRecord = pagination != null && pagination.TotalCount > 0
+        ? ((pagination.PageNumber - 1) * pagination.PageSize) + 1
+        : 0;
+    var endRecord = pagination != null && pagination.TotalCount > 0
+        ? Math.Min(pagination.PageNumber * pagination.PageSize, pagination.TotalCount)
+        : 0;
 }
 
 <h2 class="mb-4">Advisor Dashboard</h2>
@@ -10,10 +18,70 @@
     <div class="card-body">
         <h5 class="mb-3">Students Requiring Attention</h5>
 
+        <form method="get" asp-action="Index" class="row g-2 align-items-center mb-3">
+            <div class="col-md-6">
+                <input type="text"
+                       name="search"
+                       class="form-control"
+                       value="@ViewBag.Search"
+                       placeholder="Search by Student ID or name" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <label for="pageSize" class="form-label mb-0">Page size</label>
+                <select id="pageSize" name="pageSize" class="form-select form-select-sm" onchange="this.form.submit()">
+                    @if (selectedPageSize == 10)
+                    {
+                        <option value="10" selected>10</option>
+                    }
+                    else
+                    {
+                        <option value="10">10</option>
+                    }
+                    @if (selectedPageSize == 20)
+                    {
+                        <option value="20" selected>20</option>
+                    }
+                    else
+                    {
+                        <option value="20">20</option>
+                    }
+                    @if (selectedPageSize == 50)
+                    {
+                        <option value="50" selected>50</option>
+                    }
+                    else
+                    {
+                        <option value="50">50</option>
+                    }
+                    @if (selectedPageSize == 100)
+                    {
+                        <option value="100" selected>100</option>
+                    }
+                    else
+                    {
+                        <option value="100">100</option>
+                    }
+                </select>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(ViewBag.Search))
+            {
+                <div class="col-auto">
+                    <a asp-action="Index" asp-route-pageSize="@selectedPageSize" class="btn btn-outline-secondary">Clear</a>
+                </div>
+            }
+        </form>
+
+        <div class="text-muted mb-3">
+            Showing @startRecord-@endRecord of @(pagination?.TotalCount ?? 0) students
+        </div>
+
         @if (!Model.Any())
         {
             <p class="text-muted">
-                <em>No students currently require attention.</em>
+                <em>@(!string.IsNullOrWhiteSpace(ViewBag.Search) ? "No results found for your search." : "No students currently require attention.")</em>
             </p>
         }
         else
@@ -40,8 +108,8 @@
 
                         <tr>
                             <td>
-                                <a asp-controller="Students"
-                                   asp-action="Details"
+                                <a asp-controller="Advisor"
+                                   asp-action="Student"
                                    asp-route-id="@student.StudentId">
                                     Student @student.StudentId
                                 </a>
@@ -69,5 +137,13 @@
                 </tbody>
             </table>
         }
+
+        @await Html.PartialAsync("_Pagination", pagination, new ViewDataDictionary(ViewData)
+        {
+            ["RouteValues"] = new Dictionary<string, object?>
+            {
+                ["search"] = ViewBag.Search
+            }
+        })
     </div>
 </div>

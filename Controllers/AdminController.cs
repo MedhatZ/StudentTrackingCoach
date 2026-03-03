@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StudentTrackingCoach.Data;
 using StudentTrackingCoach.Models;
 using StudentTrackingCoach.Models.ViewModels;
+using StudentTrackingCoach.Services.Implementations;
 
 namespace StudentTrackingCoach.Controllers
 {
@@ -75,6 +76,68 @@ namespace StudentTrackingCoach.Controllers
                     AdvisorId = user.AdvisorId,
                     Roles = roles.ToList()
                 });
+            }
+
+            return View(vm);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DataQuality()
+        {
+            var vm = new AdminDataQualityViewModel();
+
+            // Get all students
+            var students = await _db.Students.ToListAsync();
+            vm.TotalStudents = students.Count;
+
+            // Count students with notes
+            var studentsWithNotes = await _db.AdvisorNotes
+                .Select(n => n.StudentId)
+                .Distinct()
+                .CountAsync();
+            vm.StudentsWithNotes = studentsWithNotes;
+
+            // Calculate risk for each student (using existing service)
+            var riskService = new RiskCalculationService(_db);
+
+            foreach (var student in students.Take(20)) // Limit for performance
+            {
+                var riskLevel = await riskService.CalculateStudentRiskLevelAsync(student.StudentId);
+
+                switch (riskLevel)
+                {
+                    case "High": vm.HighRiskStudents++; break;
+                    case "Medium": vm.MediumRiskStudents++; break;
+                    default: vm.LowRiskStudents++; break;
+                }
+
+                // Check for data issues
+                if (student.IsFirstGen == null)
+                {
+                    vm.StudentsWithIssues.Add(new StudentDataIssue
+                    {
+                        StudentId = student.StudentId,
+                        Issue = "Missing FirstGen data"
+                    });
+                }
+
+                if (student.IsWorking == null)
+                {
+                    vm.StudentsWithIssues.Add(new StudentDataIssue
+                    {
+                        StudentId = student.StudentId,
+                        Issue = "Missing Employment data"
+                    });
+                }
+
+                if (string.IsNullOrEmpty(student.EnrollmentStatus))
+                {
+                    vm.StudentsWithIssues.Add(new StudentDataIssue
+                    {
+                        StudentId = student.StudentId,
+                        Issue = "Missing Enrollment Status"
+                    });
+                }
             }
 
             return View(vm);

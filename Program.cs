@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StudentTrackingCoach.Data;
 using StudentTrackingCoach.Models;
+using StudentTrackingCoach.Services.Implementations;
+using StudentTrackingCoach.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +43,17 @@ builder.Services.ConfigureApplicationCookie(options =>
 // ================================
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+builder.Services.AddScoped<IStudentService, StudentService>();
+builder.Services.AddScoped<IAdvisorService, AdvisorService>();
+builder.Services.AddScoped<IRiskCalculationService, RiskCalculationService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
 
 var app = builder.Build();
 
@@ -57,6 +70,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

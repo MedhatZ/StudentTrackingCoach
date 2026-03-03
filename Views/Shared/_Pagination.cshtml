@@ -1,0 +1,72 @@
+@using Microsoft.AspNetCore.Routing
+@model StudentTrackingCoach.Models.ViewModels.PaginationViewModel
+
+@{
+    if (Model == null || Model.TotalPages <= 1)
+    {
+        return;
+    }
+
+    var controller = ViewData["PaginationController"] as string
+        ?? ViewContext.RouteData.Values["controller"]?.ToString()
+        ?? string.Empty;
+    var action = ViewData["PaginationAction"] as string
+        ?? ViewContext.RouteData.Values["action"]?.ToString()
+        ?? string.Empty;
+    var pageParameterName = ViewData["PageParameterName"] as string ?? "pageNumber";
+    var routeValues = ViewData["RouteValues"] as IDictionary<string, object?> ?? new Dictionary<string, object?>();
+
+    string BuildPageUrl(int targetPage)
+    {
+        var rv = new RouteValueDictionary(routeValues)
+        {
+            [pageParameterName] = targetPage,
+            ["pageSize"] = Model.PageSize
+        };
+
+        return Url.Action(action, controller, rv) ?? "#";
+    }
+
+    var startPage = Math.Max(1, Model.PageNumber - 2);
+    var endPage = Math.Min(Model.TotalPages, Model.PageNumber + 2);
+}
+
+<nav aria-label="Pagination">
+    <ul class="pagination mb-0">
+        <li class="page-item @(Model.HasPrevious ? "" : "disabled")">
+            @if (Model.HasPrevious)
+            {
+                <a class="page-link" href="@BuildPageUrl(Model.PageNumber - 1)">Previous</a>
+            }
+            else
+            {
+                <span class="page-link">Previous</span>
+            }
+        </li>
+
+        @for (var i = startPage; i <= endPage; i++)
+        {
+            <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                @if (i == Model.PageNumber)
+                {
+                    <span class="page-link">@i</span>
+                }
+                else
+                {
+                    <a class="page-link" href="@BuildPageUrl(i)">@i</a>
+                }
+            </li>
+        }
+
+        <li class="page-item @(Model.HasNext ? "" : "disabled")">
+            @if (Model.HasNext)
+            {
+                <a class="page-link" href="@BuildPageUrl(Model.PageNumber + 1)">Next</a>
+            }
+            else
+            {
+                <span class="page-link">Next</span>
+            }
+        </li>
+    </ul>
+</nav>

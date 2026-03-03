@@ -1,41 +1,224 @@
-﻿@{
+@model StudentTrackingCoach.Models.ViewModels.TasksIndexViewModel
+@{
     ViewData["Title"] = "Tasks";
+    var activeTab = (ViewBag.ActiveTab as string ?? "pending").ToLowerInvariant();
+    var selectedPageSize = (int?)ViewBag.PageSize ?? 20;
+    var pendingPagination = ViewBag.PendingPagination as StudentTrackingCoach.Models.ViewModels.PaginationViewModel;
+    var completedPagination = ViewBag.CompletedPagination as StudentTrackingCoach.Models.ViewModels.PaginationViewModel;
+
+    var pendingStart = pendingPagination != null && pendingPagination.TotalCount > 0
+        ? ((pendingPagination.PageNumber - 1) * pendingPagination.PageSize) + 1
+        : 0;
+    var pendingEnd = pendingPagination != null && pendingPagination.TotalCount > 0
+        ? Math.Min(pendingPagination.PageNumber * pendingPagination.PageSize, pendingPagination.TotalCount)
+        : 0;
+
+    var completedStart = completedPagination != null && completedPagination.TotalCount > 0
+        ? ((completedPagination.PageNumber - 1) * completedPagination.PageSize) + 1
+        : 0;
+    var completedEnd = completedPagination != null && completedPagination.TotalCount > 0
+        ? Math.Min(completedPagination.PageNumber * completedPagination.PageSize, completedPagination.TotalCount)
+        : 0;
 }
 
 <h2 class="mb-4">Advisor Tasks</h2>
 
 <div class="card shadow-sm">
     <div class="card-body">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Task</th>
-                    <th>Student</th>
-                    <th>Status</th>
-                    <th>Due Date</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Review Math Performance</td>
-                    <td>300045</td>
-                    <td><span class="badge bg-warning">Open</span></td>
-                    <td>03/10/2025</td>
-                    <td>
-                        <button class="btn btn-sm btn-success">Complete</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Schedule Advisor Meeting</td>
-                    <td>300221</td>
-                    <td><span class="badge bg-warning">Open</span></td>
-                    <td>03/12/2025</td>
-                    <td>
-                        <button class="btn btn-sm btn-success">Complete</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        @if (TempData["SuccessMessage"] is string successMessage)
+        {
+            <div class="alert alert-success">@successMessage</div>
+        }
+        @if (TempData["ErrorMessage"] is string errorMessage)
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
+        <form method="get" asp-action="Index" class="d-flex align-items-center gap-2 mb-3">
+            <input type="hidden" name="activeTab" value="@activeTab" />
+            <input type="hidden" name="pendingPageNumber" value="@(pendingPagination?.PageNumber ?? 1)" />
+            <input type="hidden" name="completedPageNumber" value="@(completedPagination?.PageNumber ?? 1)" />
+            <label for="pageSize" class="form-label mb-0">Page size</label>
+            <select id="pageSize" name="pageSize" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                @if (selectedPageSize == 10)
+                {
+                    <option value="10" selected>10</option>
+                }
+                else
+                {
+                    <option value="10">10</option>
+                }
+                @if (selectedPageSize == 20)
+                {
+                    <option value="20" selected>20</option>
+                }
+                else
+                {
+                    <option value="20">20</option>
+                }
+                @if (selectedPageSize == 50)
+                {
+                    <option value="50" selected>50</option>
+                }
+                else
+                {
+                    <option value="50">50</option>
+                }
+                @if (selectedPageSize == 100)
+                {
+                    <option value="100" selected>100</option>
+                }
+                else
+                {
+                    <option value="100">100</option>
+                }
+            </select>
+        </form>
+
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link @(activeTab == "pending" ? "active" : "")"
+                   asp-action="Index"
+                   asp-route-activeTab="pending"
+                   asp-route-pendingPageNumber="@(pendingPagination?.PageNumber ?? 1)"
+                   asp-route-completedPageNumber="@(completedPagination?.PageNumber ?? 1)"
+                   asp-route-pageSize="@selectedPageSize">
+                    Pending (@(pendingPagination?.TotalCount ?? 0))
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link @(activeTab == "completed" ? "active" : "")"
+                   asp-action="Index"
+                   asp-route-activeTab="completed"
+                   asp-route-pendingPageNumber="@(pendingPagination?.PageNumber ?? 1)"
+                   asp-route-completedPageNumber="@(completedPagination?.PageNumber ?? 1)"
+                   asp-route-pageSize="@selectedPageSize">
+                    Completed (@(completedPagination?.TotalCount ?? 0))
+                </a>
+            </li>
+        </ul>
+
+        @if (activeTab == "pending")
+        {
+            <div>
+                <div class="text-muted mb-3">
+                    Showing @pendingStart-@pendingEnd of @(pendingPagination?.TotalCount ?? 0) pending tasks
+                </div>
+                @if (!Model.PendingTasks.Any())
+                {
+                    <p class="text-muted mb-0"><em>No pending tasks.</em></p>
+                }
+                else
+                {
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Student</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var task in Model.PendingTasks)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">@task.Title</div>
+                                        <div class="text-muted small">@task.Description</div>
+                                    </td>
+                                    <td>
+                                        <div>@task.StudentName</div>
+                                        <a asp-controller="Advisor"
+                                           asp-action="Student"
+                                           asp-route-id="@task.StudentId"
+                                           class="small">View Student</a>
+                                    </td>
+                                    <td>@(task.DueDate?.ToString("MM/dd/yyyy") ?? "No due date")</td>
+                                    <td><span class="badge bg-warning text-dark">@task.Status</span></td>
+                                    <td>
+                                        <form asp-action="CompleteTask" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="taskId" value="@task.Id" />
+                                            <input type="hidden" name="activeTab" value="@activeTab" />
+                                            <input type="hidden" name="pendingPageNumber" value="@(pendingPagination?.PageNumber ?? 1)" />
+                                            <input type="hidden" name="completedPageNumber" value="@(completedPagination?.PageNumber ?? 1)" />
+                                            <input type="hidden" name="pageSize" value="@selectedPageSize" />
+                                            <button type="submit" class="btn btn-sm btn-success">Complete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                @await Html.PartialAsync("_Pagination", pendingPagination, new ViewDataDictionary(ViewData)
+                {
+                    ["PageParameterName"] = "pendingPageNumber",
+                    ["RouteValues"] = new Dictionary<string, object?>
+                    {
+                        ["activeTab"] = "pending",
+                        ["completedPageNumber"] = completedPagination?.PageNumber ?? 1
+                    }
+                })
+            </div>
+        }
+        else
+        {
+            <div>
+                <div class="text-muted mb-3">
+                    Showing @completedStart-@completedEnd of @(completedPagination?.TotalCount ?? 0) completed tasks
+                </div>
+                @if (!Model.CompletedTasks.Any())
+                {
+                    <p class="text-muted mb-0"><em>No completed tasks yet.</em></p>
+                }
+                else
+                {
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Student</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var task in Model.CompletedTasks)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">@task.Title</div>
+                                        <div class="text-muted small">@task.Description</div>
+                                    </td>
+                                    <td>
+                                        <div>@task.StudentName</div>
+                                        <a asp-controller="Advisor"
+                                           asp-action="Student"
+                                           asp-route-id="@task.StudentId"
+                                           class="small">View Student</a>
+                                    </td>
+                                    <td>@(task.DueDate?.ToString("MM/dd/yyyy") ?? "No due date")</td>
+                                    <td><span class="badge bg-success">@task.Status</span></td>
+                                    <td><span class="text-muted">-</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                @await Html.PartialAsync("_Pagination", completedPagination, new ViewDataDictionary(ViewData)
+                {
+                    ["PageParameterName"] = "completedPageNumber",
+                    ["RouteValues"] = new Dictionary<string, object?>
+                    {
+                        ["activeTab"] = "completed",
+                        ["pendingPageNumber"] = pendingPagination?.PageNumber ?? 1
+                    }
+                })
+            </div>
+        }
     </div>
 </div>

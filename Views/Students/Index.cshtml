@@ -1,7 +1,15 @@
-﻿@model IEnumerable<StudentTrackingCoach.Models.ViewModels.StudentListViewModel>
+@model IEnumerable<StudentTrackingCoach.Models.ViewModels.StudentListViewModel>
 
 @{
     ViewData["Title"] = "Students";
+    var pagination = ViewBag.Pagination as StudentTrackingCoach.Models.ViewModels.PaginationViewModel;
+    var selectedPageSize = (int?)ViewBag.PageSize ?? 20;
+    var startRecord = pagination != null && pagination.TotalCount > 0
+        ? ((pagination.PageNumber - 1) * pagination.PageSize) + 1
+        : 0;
+    var endRecord = pagination != null && pagination.TotalCount > 0
+        ? Math.Min(pagination.PageNumber * pagination.PageSize, pagination.TotalCount)
+        : 0;
 }
 
 <h2 class="mb-4">Students</h2>
@@ -9,12 +17,14 @@
 <!-- 🔎 RISK FILTER CONTROLS -->
 <div class="mb-3">
     <a asp-action="Index"
+       asp-route-pageSize="@selectedPageSize"
        class="btn btn-outline-secondary me-2 @(ViewBag.HighRiskOnly == true ? "" : "active")">
         Show All
     </a>
 
     <a asp-action="Index"
        asp-route-highRiskOnly="true"
+       asp-route-pageSize="@selectedPageSize"
        class="btn btn-outline-danger @(ViewBag.HighRiskOnly == true ? "active" : "")">
         High Risk Only
     </a>
@@ -22,6 +32,50 @@
 
 <div class="card shadow-sm">
     <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="text-muted">
+                Showing @startRecord-@endRecord of @(pagination?.TotalCount ?? 0) students
+            </div>
+            <form method="get" asp-action="Index" class="d-flex align-items-center gap-2">
+                <input type="hidden" name="highRiskOnly" value="@ViewBag.HighRiskOnly" />
+                <label for="pageSize" class="form-label mb-0">Page size</label>
+                <select id="pageSize" name="pageSize" class="form-select form-select-sm" onchange="this.form.submit()">
+                    @if (selectedPageSize == 10)
+                    {
+                        <option value="10" selected>10</option>
+                    }
+                    else
+                    {
+                        <option value="10">10</option>
+                    }
+                    @if (selectedPageSize == 20)
+                    {
+                        <option value="20" selected>20</option>
+                    }
+                    else
+                    {
+                        <option value="20">20</option>
+                    }
+                    @if (selectedPageSize == 50)
+                    {
+                        <option value="50" selected>50</option>
+                    }
+                    else
+                    {
+                        <option value="50">50</option>
+                    }
+                    @if (selectedPageSize == 100)
+                    {
+                        <option value="100" selected>100</option>
+                    }
+                    else
+                    {
+                        <option value="100">100</option>
+                    }
+                </select>
+            </form>
+        </div>
+
         <table class="table table-hover align-middle">
             <thead>
                 <tr>
@@ -98,5 +152,13 @@
                 }
             </tbody>
         </table>
+
+        @await Html.PartialAsync("_Pagination", pagination, new ViewDataDictionary(ViewData)
+        {
+            ["RouteValues"] = new Dictionary<string, object?>
+            {
+                ["highRiskOnly"] = ViewBag.HighRiskOnly
+            }
+        })
     </div>
 </div>
