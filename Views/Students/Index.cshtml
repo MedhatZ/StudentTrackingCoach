@@ -32,6 +32,7 @@
                     <th>Working</th>
                     <th>Modality</th>
                     <th>Created</th>
+                    <th>Actions</th> <!-- ✅ NEW COLUMN -->
                 </tr>
             </thead>
             <tbody>
@@ -40,7 +41,6 @@
                     string riskLabel;
                     string riskClass;
 
-                    // 🔥 SINGLE SOURCE OF TRUTH — RiskPriority
                     switch (student.RiskPriority)
                     {
                         case 1:
@@ -57,30 +57,23 @@
                             break;
                     }
 
-                <tr class="student-row"
-                    onclick="window.location='@Url.Action("Details", "Students", new { id = student.StudentId })'">
-
+                <tr>
                     <td>
                         <span class="badge @riskClass">@riskLabel</span>
                     </td>
 
                     <td>@student.StudentId</td>
-
                     <td>@student.EnrollmentStatus</td>
 
                     <td>
-                        @(student.IsFirstGen == true
-                                                ? "Yes"
-                                                : student.IsFirstGen == false
-                                                ? "No"
+                        @(student.IsFirstGen == true ? "Yes"
+                                                : student.IsFirstGen == false ? "No"
                                                 : "Unknown")
                         </td>
 
                         <td>
-                            @(student.IsWorking == true
-                                                    ? "Yes"
-                                                    : student.IsWorking == false
-                                                    ? "No"
+                            @(student.IsWorking == true ? "Yes"
+                                                    : student.IsWorking == false ? "No"
                                                     : "Unknown")
                         </td>
 
@@ -90,6 +83,16 @@
                             @(student.CreatedAt.HasValue
                                                     ? student.CreatedAt.Value.ToString("MM/dd/yyyy")
                                                     : "N/A")
+                        </td>
+
+                        <!-- ✅ NEW BUTTON -->
+                        <td>
+                            <a asp-controller="Students"
+                               asp-action="RecommendedStudyGuide"
+                               asp-route-id="@student.StudentId"
+                               class="btn btn-sm btn-primary">
+                                Study Guide
+                            </a>
                         </td>
                     </tr>
                 }

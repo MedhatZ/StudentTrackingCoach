@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using StudentTrackingCoach.Data;          // ✅ REQUIRED
+using StudentTrackingCoach.Data;
 using StudentTrackingCoach.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,8 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 // DATABASE
 // ================================
 var connectionString =
-    builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("DefaultConnection missing.");
+    builder.Configuration.GetConnectionString("StudentTrackingDB")
+    ?? throw new InvalidOperationException("StudentTrackingDB connection string missing.");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
@@ -68,7 +68,7 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-app.MapRazorPages(); // REQUIRED for Identity UI
+app.MapRazorPages();
 
 // ======================================================
 // 🔥 DEMO DATA SEEDING (SAFE — DEV ONLY)

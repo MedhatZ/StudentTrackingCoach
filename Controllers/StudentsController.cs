@@ -25,9 +25,6 @@ namespace StudentTrackingCoach.Controllers
         // ===============================
         // GET: /Students
         // ===============================
-        // ===============================
-        // GET: /Students
-        // ===============================
         public async Task<IActionResult> Index(bool highRiskOnly = false)
         {
             var query = _db.Students
@@ -42,11 +39,11 @@ namespace StudentTrackingCoach.Controllers
                     PreferredModality = s.PreferredModality,
                     CreatedAt = s.CreatedAt,
 
-                    // 🔥 DEMO RISK LOGIC (TEMP — AI later)
+                    // Demo Risk Logic
                     RiskPriority =
-                        s.IsFirstGen == true && s.IsWorking == false ? 1 :   // High
-                        s.IsFirstGen == true || s.IsWorking == false ? 2 :   // Medium
-                        3,                                                    // Low
+                        s.IsFirstGen == true && s.IsWorking == false ? 1 :
+                        s.IsFirstGen == true || s.IsWorking == false ? 2 :
+                        3,
 
                     HasOpenPendingActions =
                         s.IsFirstGen == true && s.IsWorking == false
@@ -80,11 +77,46 @@ namespace StudentTrackingCoach.Controllers
         }
 
         // ===============================
+        // GET: /Students/RecommendedStudyGuide/{id}
+        // ===============================
+        public IActionResult RecommendedStudyGuide(long id)
+        {
+            var vm = new RecommendedStudyGuideViewModel
+            {
+                StudentId = id,
+                StudentName = $"Student {id}",
+                CourseName = "Mathematics 101",
+                CurrentGrade = "D"
+            };
+
+            return View(vm);
+        }
+
+        // ===============================
+        // POST: /Students/SaveStudyGuide
+        // ===============================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult SaveStudyGuide(RecommendedStudyGuideViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("RecommendedStudyGuide", model);
+            }
+
+            // 🚧 Phase 1: Presentation only
+            // Later we persist to DB
+
+            TempData["SuccessMessage"] = "Study guide saved successfully.";
+
+            return RedirectToAction("Details", new { id = model.StudentId });
+        }
+
+        // ===============================
         // GET: /Students/MyGradPath
         // ===============================
         public async Task<IActionResult> MyGradPath()
         {
-            // DEMO MODE: Pull first student so the page always renders with data
             var student = await _db.Students
                 .AsNoTracking()
                 .FirstOrDefaultAsync();

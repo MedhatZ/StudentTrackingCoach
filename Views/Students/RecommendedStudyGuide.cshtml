@@ -1,0 +1,84 @@
+﻿@model StudentTrackingCoach.Models.ViewModels.RecommendedStudyGuideViewModel
+
+@{
+    ViewData["Title"] = "Recommended Study Guide";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Recommended Study Guide</h5>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="SaveStudyGuide" method="post">
+
+                <input type="hidden" asp-for="StudentId" />
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Student Name</label>
+                        <input asp-for="StudentName" class="form-control" readonly />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Course</label>
+                        <input asp-for="CourseName" class="form-control" readonly />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Current Grade</label>
+                        <input asp-for="CurrentGrade" class="form-control text-danger fw-bold" readonly />
+                    </div>
+                </div>
+
+                <hr />
+
+                <div class="mb-3">
+                    <label class="form-label">Primary Areas to Focus On</label>
+                    <textarea asp-for="FocusAreas" class="form-control" rows="3"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Recommended Weekly Study Schedule</label>
+                    <textarea asp-for="StudySchedule" class="form-control" rows="3"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Study Techniques</label>
+                    <textarea asp-for="StudyTechniques" class="form-control" rows="3"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Recommended Resources</label>
+                    <textarea asp-for="Resources" class="form-control" rows="3"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Advisor Notes</label>
+                    <textarea asp-for="AdvisorNotes" class="form-control" rows="3"></textarea>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Follow-Up Date</label>
+                        <input asp-for="FollowUpDate" type="date" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Expected Outcome</label>
+                        <input asp-for="ExpectedOutcome" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <a asp-action="Details" asp-route-id="@Model.StudentId" class="btn btn-secondary me-2">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        Save Study Guide
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+

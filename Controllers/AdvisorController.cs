@@ -14,7 +14,9 @@ namespace StudentTrackingCoach.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ApplicationDbContext _db;
 
-        public AdvisorController(UserManager<ApplicationUser> userManager, ApplicationDbContext db)
+        public AdvisorController(
+            UserManager<ApplicationUser> userManager,
+            ApplicationDbContext db)
         {
             _userManager = userManager;
             _db = db;
@@ -65,13 +67,18 @@ namespace StudentTrackingCoach.Controllers
                 PrimaryRiskDriver = "Failing one or more assessments",
                 SecondaryRiskDriver = "Low engagement",
 
+                // ✅ CORRECT + SAFE MAPPING
                 Notes = notes.Select(n => new AdvisorNoteViewModel
                 {
-                    
+                    Title = n.ActionTaken,          // map action → title
+                    Severity = "Medium",            // demo-safe default
+                    Category = "Advising",
                     Notes = n.Notes,
                     CreatedBy = n.AdvisorUserId,
                     CreatedAt = n.CreatedAt
                 }).ToList()
+
+
             };
 
             return View(vm);
