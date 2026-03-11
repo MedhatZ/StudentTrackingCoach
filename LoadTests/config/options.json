@@ -1,0 +1,24 @@
+{
+  "baseUrl": "https://localhost:5001",
+  "thresholds": {
+    "http_req_duration": ["p(95)<2000", "p(99)<4000"],
+    "http_req_failed": ["rate<0.01"],
+    "checks": ["rate>0.99"]
+  },
+  "normal": {
+    "vus": 50,
+    "duration": "10m"
+  },
+  "peak": {
+    "vus": 200,
+    "duration": "15m"
+  },
+  "stress": {
+    "vus": 500,
+    "duration": "20m"
+  },
+  "soak": {
+    "vus": 120,
+    "duration": "1h"
+  }
+}

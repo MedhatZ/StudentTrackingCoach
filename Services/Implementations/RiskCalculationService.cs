@@ -7,15 +7,17 @@ namespace StudentTrackingCoach.Services.Implementations
     public class RiskCalculationService : IRiskCalculationService
     {
         private readonly ApplicationDbContext _db;
+        private readonly ITelemetryService _telemetryService;
 
         // Risk thresholds (hardcoded - no DB changes)
         private const int HIGH_RISK_PRIORITY = 1;
         private const int MEDIUM_RISK_PRIORITY = 2;
         private const int LOW_RISK_PRIORITY = 3;
 
-        public RiskCalculationService(ApplicationDbContext db)
+        public RiskCalculationService(ApplicationDbContext db, ITelemetryService telemetryService)
         {
             _db = db;
+            _telemetryService = telemetryService;
         }
 
         public async Task<int> CalculateStudentRiskPriorityAsync(long studentId)
@@ -76,14 +78,16 @@ namespace StudentTrackingCoach.Services.Implementations
 
         public async Task<string> CalculateStudentRiskLevelAsync(long studentId)
         {
+            var startedAt = DateTimeOffset.UtcNow;
             var priority = await CalculateStudentRiskPriorityAsync(studentId);
-
-            return priority switch
+            var riskLevel = priority switch
             {
                 HIGH_RISK_PRIORITY => "High",
                 MEDIUM_RISK_PRIORITY => "Medium",
                 _ => "Low"
             };
+            _telemetryService.TrackRiskCalculation(riskLevel, (DateTimeOffset.UtcNow - startedAt).TotalMilliseconds);
+            return riskLevel;
         }
 
         public async Task<List<string>> GetRiskDriversAsync(long studentId)

@@ -1,0 +1,87 @@
+@model StudentTrackingCoach.Models.ViewModels.AdminHealthCheckViewModel
+
+@{
+    ViewData["Title"] = "System Health Check";
+}
+
+<h2 class="mb-4">System Health Check</h2>
+
+@if (!string.IsNullOrWhiteSpace(Model.LastAiTestResult))
+{
+    <div class="alert alert-info">@Model.LastAiTestResult</div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5>Azure OpenAI</h5>
+                <p class="mb-1">
+                    Status:
+                    <strong class="@(Model.AzureOpenAiConfigured ? "text-success" : "text-danger")">
+                        @(Model.AzureOpenAiConfigured ? "Configured" : "Not Configured")
+                    </strong>
+                </p>
+                <p class="text-muted mb-0">@Model.AzureOpenAiStatus</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5>Database</h5>
+                <p class="mb-0">
+                    Connection:
+                    <strong class="@(Model.DatabaseConnected ? "text-success" : "text-danger")">
+                        @(Model.DatabaseConnected ? "Connected" : "Disconnected")
+                    </strong>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5>Mock AI Fallback</h5>
+                <p class="mb-1">
+                    <strong class="@(Model.MockFallbackActive ? "text-warning" : "text-success")">
+                        @(Model.MockFallbackActive ? "Active" : "Inactive")
+                    </strong>
+                </p>
+                <p class="text-muted mb-0">Resolved AI service: @Model.AiServiceType</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5>Cache</h5>
+                <p class="mb-1">
+                    <strong class="@(Model.CacheAvailable ? "text-success" : "text-danger")">
+                        @(Model.CacheAvailable ? "Available" : "Unavailable")
+                    </strong>
+                </p>
+                <p class="text-muted mb-0">@Model.CacheStatus</p>
+                <p class="text-muted mb-0">@Model.RedisStatus</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5>Application Insights</h5>
+                <p class="mb-1">
+                    <strong class="@(Model.ApplicationInsightsConfigured ? "text-success" : "text-warning")">
+                        @(Model.ApplicationInsightsConfigured ? "Configured" : "Not Configured")
+                    </strong>
+                </p>
+                <p class="text-muted mb-0">@Model.ApplicationInsightsStatus</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form asp-action="TestAiConnection" method="post">
+    @Html.AntiForgeryToken()
+    <button type="submit" class="btn btn-primary">Test AI Connection</button>
+</form>

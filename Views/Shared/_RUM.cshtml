@@ -1,0 +1,18 @@
+@inject IConfiguration Configuration
+
+@{
+    var rumEnabled = Configuration.GetValue<bool>("RealUserMonitoring:Enabled");
+}
+
+@if (rumEnabled)
+{
+    <script>
+        window.gradPathRum = {
+            enabled: true,
+            trackPageViews: @(Configuration.GetValue<bool>("RealUserMonitoring:TrackPageViews").ToString().ToLowerInvariant()),
+            trackUserActions: @(Configuration.GetValue<bool>("RealUserMonitoring:TrackUserActions").ToString().ToLowerInvariant()),
+            sessionReplayEnabled: @(Configuration.GetValue<bool>("RealUserMonitoring:SessionReplayEnabled").ToString().ToLowerInvariant())
+        };
+    </script>
+    <script src="~/js/rum-tracker.js" asp-append-version="true"></script>
+}

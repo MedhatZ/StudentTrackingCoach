@@ -2,6 +2,11 @@
 
 <h2>Data Quality Report</h2>
 
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-warning">@errorMessage</div>
+}
+
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card text-white bg-primary">
@@ -36,6 +41,59 @@
         </div>
     </div>
 </div>
+
+<h4>AI Usage Metrics (Today)</h4>
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">AI Calls</h5>
+                <h3>@Model.AiCallsToday</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                <h5 class="card-title">Fallbacks</h5>
+                <h3>@Model.AiFallbacksToday</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!Model.AiUsageMetrics.Any())
+{
+    <p class="text-muted">No AI usage recorded today.</p>
+}
+else
+{
+    <table class="table table-sm mb-4">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Advisor</th>
+                <th>Total Calls</th>
+                <th>Success</th>
+                <th>Failed</th>
+                <th>Fallbacks</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var metric in Model.AiUsageMetrics)
+            {
+                <tr>
+                    <td>@metric.Date</td>
+                    <td>@metric.AdvisorId</td>
+                    <td>@metric.TotalCalls</td>
+                    <td>@metric.SuccessfulCalls</td>
+                    <td>@metric.FailedCalls</td>
+                    <td>@metric.FallbackCalls</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
 
 <h4>Students with Data Issues</h4>
 

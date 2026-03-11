@@ -5,9 +5,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using StudentTrackingCoach.Data;
+using StudentTrackingCoach.Models.Ai;
 using StudentTrackingCoach.Models;
 using StudentTrackingCoach.Models.ViewModels;
 using StudentTrackingCoach.Services.Interfaces;
+using System.Text.Json;
 
 namespace StudentTrackingCoach.Controllers
 {
@@ -18,17 +20,32 @@ namespace StudentTrackingCoach.Controllers
         private readonly ApplicationDbContext _db;
         private readonly IStudentService _studentService;
         private readonly IRiskCalculationService _riskService;
+        private readonly IAiRecommendationService _aiService;
+        private readonly IConfiguration _configuration;
+        private readonly ITelemetryService _telemetryService;
+        private readonly ITenantService _tenantService;
+        private readonly ILogger<StudentsController> _logger;
 
         public StudentsController(
             UserManager<ApplicationUser> userManager,
             ApplicationDbContext db,
             IStudentService studentService,
-            IRiskCalculationService riskService)
+            IRiskCalculationService riskService,
+            IAiRecommendationService aiService,
+            IConfiguration configuration,
+            ITelemetryService telemetryService,
+            ITenantService tenantService,
+            ILogger<StudentsController> logger)
         {
             _userManager = userManager;
             _db = db;
             _studentService = studentService;
             _riskService = riskService;
+            _aiService = aiService;
+            _configuration = configuration;
+            _telemetryService = telemetryService;
+            _tenantService = tenantService;
+            _logger = logger;
         }
 
         // ===============================
@@ -36,6 +53,12 @@ namespace StudentTrackingCoach.Controllers
         // ===============================
         public async Task<IActionResult> Index(bool highRiskOnly = false, int pageNumber = 1, int pageSize = 20)
         {
+            _telemetryService.TrackEvent("StudentsIndexViewed", new Dictionary<string, string>
+            {
+                ["highRiskOnly"] = highRiskOnly.ToString(),
+                ["pageNumber"] = pageNumber.ToString(),
+                ["pageSize"] = pageSize.ToString()
+            });
             pageSize = NormalizePageSize(pageSize);
             pageNumber = Math.Max(1, pageNumber);
 
@@ -132,26 +155,44 @@ namespace StudentTrackingCoach.Controllers
                 .Take(5)
                 .ToListAsync();
 
+            var enableAiRecommendations = _configuration.GetValue<bool>("AiFeatures:Enabled");
+            var aiResult = enableAiRecommendations
+                ? await _aiService.GenerateRecommendationsAsync(id)
+                : null;
+            _telemetryService.TrackEvent("RecommendedStudyGuideGenerated", new Dictionary<string, string>
+            {
+                ["studentId"] = id.ToString(),
+                ["usedAi"] = (aiResult != null).ToString()
+            });
+
             var vm = new RecommendedStudyGuideViewModel
             {
                 StudentId = id,
                 StudentName = $"Student {id}",
                 CourseName = "Current Term Courses",
                 CurrentGrade = simulatedGrade.HasValue ? $"{simulatedGrade.Value:F1}%" : "N/A",
-                FocusAreas = GenerateFocusAreas(riskLevel, riskDrivers, recentNotes),
-                StudySchedule = GenerateStudySchedule(riskLevel),
-                StudyTechniques = GenerateStudyTechniques(riskLevel, riskDrivers),
-                Resources = GenerateResources(riskLevel),
+                FocusAreas = aiResult?.FocusAreas ?? GenerateFocusAreas(riskLevel, riskDrivers, recentNotes),
+                StudySchedule = aiResult?.StudySchedule ?? GenerateStudySchedule(riskLevel),
+                StudyTechniques = aiResult?.StudyTechniques ?? GenerateStudyTechniques(riskLevel, riskDrivers),
+                Resources = aiResult?.Resources ?? GenerateResources(riskLevel),
                 AdvisorNotes = recentNotes.Any()
                     ? string.Join("\n", recentNotes.Select(n => $"- {n.Notes}"))
                     : "No recent advisor notes",
-                FollowUpDate = DateTime.Today.AddDays(14),
-                ExpectedOutcome = riskLevel == "High"
+                FollowUpDate = aiResult?.FollowUpDate ?? DateTime.Today.AddDays(14),
+                ExpectedOutcome = aiResult?.ExpectedOutcome ?? (riskLevel == "High"
                     ? "Improve grade to passing (70%+)"
                     : riskLevel == "Medium"
                         ? "Improve grade to 75%+"
-                        : "Maintain current performance"
+                        : "Maintain current performance"),
+                GeneratedBy = aiResult != null ? "AI-Mock" : "Advisor",
+                GeneratedAt = DateTime.UtcNow,
+                ConfidenceScore = aiResult?.ConfidenceScore,
+                IsAIGenerated = aiResult != null,
+                AdvisorModified = false
             };
+
+            ViewBag.AIGenerated = aiResult != null;
+            ViewBag.ShowConfidenceScore = _configuration.GetValue<bool>("AiFeatures:ShowConfidenceScore");
 
             return View(vm);
         }
@@ -168,21 +209,46 @@ namespace StudentTrackingCoach.Controllers
                 return View("RecommendedStudyGuide", model);
             }
 
+            var originalAi = model.IsAIGenerated
+                ? await _aiService.GenerateRecommendationsAsync(model.StudentId)
+                : null;
+            var advisorChanges = BuildAdvisorChanges(model, originalAi);
+            model.AdvisorModified = advisorChanges.Any();
+            model.GeneratedBy = model.IsAIGenerated
+                ? (model.AdvisorModified ? "Advisor-Modified (AI-Mock)" : "AI-Mock")
+                : "Advisor";
+            model.GeneratedAt ??= DateTime.UtcNow;
+
+            var payload = new StudyGuideInterventionContent
+            {
+                StudyGuide = model,
+                OriginalAI = originalAi,
+                AdvisorChanges = advisorChanges
+            };
+
             try
             {
                 var newIntervention = new Intervention
                 {
                     StudentId = model.StudentId,
+                    TenantId = _tenantService.CurrentTenantId,
                     AdvisorId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier) ?? "system",
                     Type = "Study Guide",
-                    Content = System.Text.Json.JsonSerializer.Serialize(model),
+                    Content = System.Text.Json.JsonSerializer.Serialize(payload),
                     CreatedAt = DateTime.UtcNow,
                     Status = "Pending",
-                    StudentName = model.StudentName
+                    StudentName = model.StudentName,
+                    IsAIGenerated = model.IsAIGenerated
                 };
 
                 _db.Interventions.Add(newIntervention);
                 await _db.SaveChangesAsync();
+                _telemetryService.TrackEvent("StudyGuideSaved", new Dictionary<string, string>
+                {
+                    ["studentId"] = model.StudentId.ToString(),
+                    ["isAiGenerated"] = model.IsAIGenerated.ToString(),
+                    ["advisorModified"] = model.AdvisorModified.ToString()
+                });
 
                 TempData["SuccessMessage"] = "Study guide saved successfully and is pending review.";
             }
@@ -199,6 +265,11 @@ namespace StudentTrackingCoach.Controllers
         [Authorize(Roles = "Student,Admin")]
         public async Task<IActionResult> MyStudyGuides()
         {
+            _telemetryService.TrackEvent("MyStudyGuidesViewed", new Dictionary<string, string>
+            {
+                ["isAdmin"] = User.IsInRole("Admin").ToString(),
+                ["isStudent"] = User.IsInRole("Student").ToString()
+            });
             // Get current logged-in user
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -239,20 +310,67 @@ namespace StudentTrackingCoach.Controllers
 
             // Deserialize content for display
             var viewModels = new List<RecommendedStudyGuideViewModel>();
+            var guideDebug = new List<StudyGuideDebugInfoViewModel>();
             foreach (var guide in approvedGuides)
             {
-                try
+                var contentLength = guide.Content?.Length ?? 0;
+                var content = guide.Content ?? string.Empty;
+                var preview = content.Length > 200
+                    ? content[..200]
+                    : content;
+
+                _logger.LogInformation(
+                    "MyStudyGuides guide encountered. studentId={StudentId}, guideId={GuideId}, contentLength={ContentLength}",
+                    studentId,
+                    guide.Id,
+                    contentLength);
+
+                var vm = ExtractStudyGuideFromContent(
+                    guide.Content,
+                    guide.Id,
+                    studentId,
+                    out var formatUsed,
+                    out var deserializationError);
+
+                var success = vm != null;
+                if (success && vm != null)
                 {
-                    var vm = System.Text.Json.JsonSerializer.Deserialize<RecommendedStudyGuideViewModel>(guide.Content);
-                    if (vm != null)
-                    {
-                        viewModels.Add(vm);
-                    }
+                    viewModels.Add(vm);
+                    _logger.LogInformation(
+                        "MyStudyGuides deserialization succeeded. studentId={StudentId}, guideId={GuideId}, format={FormatUsed}",
+                        studentId,
+                        guide.Id,
+                        formatUsed);
                 }
-                catch (Exception ex)
+                else
                 {
-                    // Log error but continue processing other guides
-                    Console.WriteLine($"Error deserializing guide {guide.Id}: {ex.Message}");
+                    _logger.LogWarning(
+                        "MyStudyGuides deserialization failed. studentId={StudentId}, guideId={GuideId}, format={FormatUsed}, error={Error}",
+                        studentId,
+                        guide.Id,
+                        formatUsed,
+                        deserializationError ?? "Unknown error");
+                }
+
+                guideDebug.Add(new StudyGuideDebugInfoViewModel
+                {
+                    GuideId = guide.Id,
+                    StudentId = guide.StudentId,
+                    ContentLength = contentLength,
+                    FormatUsed = formatUsed,
+                    DeserializationSucceeded = success,
+                    ErrorMessage = deserializationError,
+                    RawContentPreview = preview
+                });
+
+                if (!success)
+                {
+                    // Always show a fallback card so users can still see the guide slot.
+                    var fallback = BuildFallbackGuide(studentId, guide.Id);
+                    if (fallback != null)
+                    {
+                        viewModels.Add(fallback);
+                    }
                 }
             }
 
@@ -261,6 +379,7 @@ namespace StudentTrackingCoach.Controllers
             ViewBag.StudentId = studentId;
             ViewBag.AllStatuses = string.Join(", ", interventions.Select(i => i.Status));
             ViewBag.ApprovedCount = approvedGuides.Count;
+            ViewBag.GuideDebug = guideDebug;
 
             return View(viewModels);
         }
@@ -439,5 +558,139 @@ namespace StudentTrackingCoach.Controllers
                 _ => 20
             };
         }
+
+        private RecommendedStudyGuideViewModel? ExtractStudyGuideFromContent(
+            string? content,
+            int guideId,
+            long studentId,
+            out string formatUsed,
+            out string? errorMessage)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                formatUsed = "empty";
+                errorMessage = "Content is null or empty.";
+                _logger.LogWarning(
+                    "MyStudyGuides guide content empty. studentId={StudentId}, guideId={GuideId}",
+                    studentId,
+                    guideId);
+                return BuildFallbackGuide(studentId, guideId);
+            }
+
+            try
+            {
+                var wrapped = JsonSerializer.Deserialize<StudyGuideInterventionContent>(content);
+                if (wrapped?.StudyGuide != null)
+                {
+                    formatUsed = "wrapped";
+                    errorMessage = null;
+                    return EnsureGuideDefaults(wrapped.StudyGuide, studentId, guideId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(
+                    ex,
+                    "MyStudyGuides wrapped deserialization failed. studentId={StudentId}, guideId={GuideId}",
+                    studentId,
+                    guideId);
+            }
+
+            try
+            {
+                var legacy = JsonSerializer.Deserialize<RecommendedStudyGuideViewModel>(content);
+                if (legacy != null)
+                {
+                    formatUsed = "legacy";
+                    errorMessage = null;
+                    return EnsureGuideDefaults(legacy, studentId, guideId);
+                }
+            }
+            catch (Exception ex)
+            {
+                formatUsed = "legacy-failed";
+                errorMessage = ex.Message;
+                _logger.LogWarning(
+                    ex,
+                    "MyStudyGuides legacy deserialization failed. studentId={StudentId}, guideId={GuideId}",
+                    studentId,
+                    guideId);
+                return BuildFallbackGuide(studentId, guideId);
+            }
+
+            formatUsed = "unknown-json-shape";
+            errorMessage = "JSON payload does not match wrapped or legacy study-guide schema.";
+            _logger.LogWarning(
+                "MyStudyGuides unknown content shape. studentId={StudentId}, guideId={GuideId}",
+                studentId,
+                guideId);
+            return BuildFallbackGuide(studentId, guideId);
+        }
+
+        private static RecommendedStudyGuideViewModel EnsureGuideDefaults(
+            RecommendedStudyGuideViewModel vm,
+            long studentId,
+            int guideId)
+        {
+            vm.StudentId = vm.StudentId <= 0 ? studentId : vm.StudentId;
+            vm.StudentName = string.IsNullOrWhiteSpace(vm.StudentName) ? $"Student {studentId}" : vm.StudentName;
+            vm.CourseName = string.IsNullOrWhiteSpace(vm.CourseName) ? "General Coursework" : vm.CourseName;
+            vm.CurrentGrade = string.IsNullOrWhiteSpace(vm.CurrentGrade) ? "N/A" : vm.CurrentGrade;
+            vm.FocusAreas = string.IsNullOrWhiteSpace(vm.FocusAreas) ? "No focus areas provided." : vm.FocusAreas;
+            vm.StudySchedule = string.IsNullOrWhiteSpace(vm.StudySchedule) ? "No schedule provided." : vm.StudySchedule;
+            vm.StudyTechniques = string.IsNullOrWhiteSpace(vm.StudyTechniques) ? "No techniques provided." : vm.StudyTechniques;
+            vm.Resources = string.IsNullOrWhiteSpace(vm.Resources) ? "No resources listed." : vm.Resources;
+            vm.ExpectedOutcome = string.IsNullOrWhiteSpace(vm.ExpectedOutcome)
+                ? "Expected outcome not available."
+                : vm.ExpectedOutcome;
+            vm.GeneratedAt ??= DateTime.UtcNow;
+            vm.GeneratedBy = string.IsNullOrWhiteSpace(vm.GeneratedBy) ? $"Recovered Guide #{guideId}" : vm.GeneratedBy;
+            return vm;
+        }
+
+        private static RecommendedStudyGuideViewModel BuildFallbackGuide(long studentId, int guideId)
+        {
+            return new RecommendedStudyGuideViewModel
+            {
+                StudentId = studentId,
+                StudentName = $"Student {studentId}",
+                CourseName = "General Coursework",
+                CurrentGrade = "N/A",
+                FocusAreas = "Study guide content is unavailable.",
+                StudySchedule = "Unable to load schedule from saved content.",
+                StudyTechniques = "Unable to load study techniques from saved content.",
+                Resources = "No resources available.",
+                ExpectedOutcome = "Please ask your advisor to regenerate this guide.",
+                GeneratedBy = $"Fallback for Guide #{guideId}",
+                GeneratedAt = DateTime.UtcNow,
+                AdvisorModified = false,
+                IsAIGenerated = false
+            };
+        }
+
+        private static List<string> BuildAdvisorChanges(RecommendedStudyGuideViewModel model, AiRecommendationResult? originalAi)
+        {
+            var changes = new List<string>();
+            if (originalAi == null)
+            {
+                return changes;
+            }
+
+            if (!string.Equals(model.FocusAreas?.Trim(), originalAi.FocusAreas.Trim(), StringComparison.Ordinal))
+                changes.Add("FocusAreas");
+            if (!string.Equals(model.StudySchedule?.Trim(), originalAi.StudySchedule.Trim(), StringComparison.Ordinal))
+                changes.Add("StudySchedule");
+            if (!string.Equals(model.StudyTechniques?.Trim(), originalAi.StudyTechniques.Trim(), StringComparison.Ordinal))
+                changes.Add("StudyTechniques");
+            if (!string.Equals((model.Resources ?? string.Empty).Trim(), originalAi.Resources.Trim(), StringComparison.Ordinal))
+                changes.Add("Resources");
+            if (model.FollowUpDate != originalAi.FollowUpDate)
+                changes.Add("FollowUpDate");
+            if (!string.Equals((model.ExpectedOutcome ?? string.Empty).Trim(), originalAi.ExpectedOutcome.Trim(), StringComparison.Ordinal))
+                changes.Add("ExpectedOutcome");
+
+            return changes;
+        }
+
     }
 }

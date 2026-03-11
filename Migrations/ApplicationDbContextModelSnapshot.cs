@@ -178,7 +178,12 @@ namespace StudentTrackingCoach.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CreatedAt");
 
                     b.ToTable("AdminAuditLogs", (string)null);
                 });
@@ -235,7 +240,12 @@ namespace StudentTrackingCoach.Migrations
                     b.Property<long>("StudentId")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("AdvisorNoteId");
+
+                    b.HasIndex("TenantId", "StudentId", "CreatedAt");
 
                     b.ToTable("AdvisorNotes", (string)null);
                 });
@@ -364,7 +374,7 @@ namespace StudentTrackingCoach.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<long>("StudentId")
                         .HasColumnType("bigint");
@@ -372,11 +382,16 @@ namespace StudentTrackingCoach.Migrations
                     b.Property<string>("StudentName")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "StudentId", "Status");
 
                     b.ToTable("Interventions", "dbo");
                 });
@@ -404,9 +419,116 @@ namespace StudentTrackingCoach.Migrations
                     b.Property<string>("PreferredModality")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("StudentId");
 
+                    b.HasIndex("TenantId", "StudentId");
+
                     b.ToTable("Student", "dbo");
+                });
+
+            modelBuilder.Entity("StudentTrackingCoach.Models.Tenant", b =>
+                {
+                    b.Property<int>("TenantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TenantId"));
+
+                    b.Property<string>("ConnectionString")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("HighRiskThreshold")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("PassingGrade")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("TenantId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Tenants", (string)null);
+                });
+
+            modelBuilder.Entity("StudentTrackingCoach.Models.TenantFeature", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FeatureKey")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("FeatureValue")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "FeatureKey")
+                        .IsUnique();
+
+                    b.ToTable("TenantFeatures", (string)null);
+                });
+
+            modelBuilder.Entity("StudentTrackingCoach.Models.TenantUserRole", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("RoleName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("TenantId", "UserId", "RoleName")
+                        .IsUnique();
+
+                    b.ToTable("TenantUserRoles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -479,9 +601,51 @@ namespace StudentTrackingCoach.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("StudentTrackingCoach.Models.TenantFeature", b =>
+                {
+                    b.HasOne("StudentTrackingCoach.Models.Tenant", "Tenant")
+                        .WithMany("Features")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("StudentTrackingCoach.Models.TenantUserRole", b =>
+                {
+                    b.HasOne("StudentTrackingCoach.Models.Tenant", "Tenant")
+                        .WithMany("TenantUsers")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("StudentTrackingCoach.Models.ApplicationUser", "User")
+                        .WithMany("TenantRoles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("StudentTrackingCoach.Models.ApplicationUser", b =>
+                {
+                    b.Navigation("TenantRoles");
+                });
+
             modelBuilder.Entity("StudentTrackingCoach.Models.Student", b =>
                 {
                     b.Navigation("AdvisorStudents");
+                });
+
+            modelBuilder.Entity("StudentTrackingCoach.Models.Tenant", b =>
+                {
+                    b.Navigation("Features");
+
+                    b.Navigation("TenantUsers");
                 });
 #pragma warning restore 612, 618
         }

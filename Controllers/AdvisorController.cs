@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StudentTrackingCoach.Data;
+using StudentTrackingCoach.Models.Ai;
 using StudentTrackingCoach.Models;
 using StudentTrackingCoach.Models.ViewModels;
 using StudentTrackingCoach.Services.Interfaces;
@@ -17,17 +18,26 @@ namespace StudentTrackingCoach.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ApplicationDbContext _db;
         private readonly IConfiguration _configuration;
+        private readonly IAiRecommendationService _aiService;
+        private readonly ITelemetryService _telemetryService;
+        private readonly ITenantService _tenantService;
 
         public AdvisorController(
             UserManager<ApplicationUser> userManager,
             IAdvisorService advisorService,
             ApplicationDbContext db,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IAiRecommendationService aiService,
+            ITelemetryService telemetryService,
+            ITenantService tenantService)
         {
             _userManager = userManager;
             _advisorService = advisorService;
             _db = db;
             _configuration = configuration;
+            _aiService = aiService;
+            _telemetryService = telemetryService;
+            _tenantService = tenantService;
         }
 
         // ===============================
@@ -35,6 +45,12 @@ namespace StudentTrackingCoach.Controllers
         // ===============================
         public async Task<IActionResult> Index(string? search, int pageNumber = 1, int pageSize = 20)
         {
+            _telemetryService.TrackEvent("AdvisorIndexViewed", new Dictionary<string, string>
+            {
+                ["search"] = search ?? string.Empty,
+                ["pageNumber"] = pageNumber.ToString(),
+                ["pageSize"] = pageSize.ToString()
+            });
             pageSize = NormalizePageSize(pageSize);
             pageNumber = Math.Max(1, pageNumber);
 
@@ -74,7 +90,7 @@ namespace StudentTrackingCoach.Controllers
         // ===============================
         // GET: /Advisor/Student/{id}
         // ===============================
-        public async Task<IActionResult> Student(long id)
+        public async Task<IActionResult> Student(long id, bool regenerateAi = false)
         {
             var vm = await _advisorService.GetStudentDetailForAdvisorAsync(id);
             if (vm == null)
@@ -83,7 +99,18 @@ namespace StudentTrackingCoach.Controllers
             var coursesVm = await _advisorService.GetStudentCoursesAsync(id);
             ViewBag.StudentCourses = coursesVm;
             ViewBag.PassingThreshold = _configuration.GetValue<decimal?>("RiskThresholds:PassingGrade") ?? 70m;
-            
+            ViewBag.AiRecommendation = await _aiService.GenerateRecommendationsAsync(id);
+            ViewBag.ShowConfidenceScore = _configuration.GetValue<bool>("AiFeatures:ShowConfidenceScore");
+            if (regenerateAi)
+            {
+                TempData["SuccessMessage"] = "AI recommendations regenerated.";
+            }
+            _telemetryService.TrackEvent("AdvisorStudentViewed", new Dictionary<string, string>
+            {
+                ["studentId"] = id.ToString(),
+                ["regenerateAi"] = regenerateAi.ToString()
+            });
+
             return View(vm);
         }
 
@@ -116,6 +143,7 @@ namespace StudentTrackingCoach.Controllers
                 new AdvisorNote
                 {
                     StudentId = 100001,
+                    TenantId = _tenantService.CurrentTenantId,
                     AdvisorUserId = "system",
                     ActionTaken = "Academic Alert",
                     Notes = "Student is failing multiple classes. Attendance at 60%.",
@@ -124,6 +152,7 @@ namespace StudentTrackingCoach.Controllers
                 new AdvisorNote
                 {
                     StudentId = 100001,
+                    TenantId = _tenantService.CurrentTenantId,
                     AdvisorUserId = "system",
                     ActionTaken = "Follow-up",
                     Notes = "Missed tutoring appointment. Grades dropping.",
@@ -132,6 +161,7 @@ namespace StudentTrackingCoach.Controllers
                 new AdvisorNote
                 {
                     StudentId = 100001,
+                    TenantId = _tenantService.CurrentTenantId,
                     AdvisorUserId = "system",
                     ActionTaken = "Initial Concern",
                     Notes = "First generation student struggling with coursework.",
@@ -140,6 +170,7 @@ namespace StudentTrackingCoach.Controllers
                 new AdvisorNote
                 {
                     StudentId = 100003,
+                    TenantId = _tenantService.CurrentTenantId,
                     AdvisorUserId = "system",
                     ActionTaken = "Attendance Issue",
                     Notes = "Missed 5 classes. Not responding to emails.",
@@ -148,6 +179,7 @@ namespace StudentTrackingCoach.Controllers
                 new AdvisorNote
                 {
                     StudentId = 100003,
+                    TenantId = _tenantService.CurrentTenantId,
                     AdvisorUserId = "system",
                     ActionTaken = "Tutoring Referral",
                     Notes = "Referred to tutoring but hasn't shown up.",
@@ -164,6 +196,7 @@ namespace StudentTrackingCoach.Controllers
         [HttpGet]
         public async Task<IActionResult> PendingReviews()
         {
+            _telemetryService.TrackEvent("PendingReviewsViewed");
             var pending = await _db.Interventions
                 .Where(i => i.Status == "Pending")
                 .OrderByDescending(i => i.CreatedAt)
@@ -192,7 +225,7 @@ namespace StudentTrackingCoach.Controllers
             }
 
             // Deserialize the content back to ViewModel
-            var studyGuide = System.Text.Json.JsonSerializer.Deserialize<RecommendedStudyGuideViewModel>(intervention.Content);
+            var studyGuide = ExtractStudyGuideFromContent(intervention.Content);
 
             // Pass both to the view
             ViewBag.Intervention = intervention;
@@ -217,18 +250,37 @@ namespace StudentTrackingCoach.Controllers
                     intervention.Status = "Approved";
                     intervention.ApprovedAt = DateTime.UtcNow;
                     TempData["SuccessMessage"] = "Study guide approved and sent to student.";
+                    _telemetryService.TrackEvent("StudyGuideApproved", new Dictionary<string, string>
+                    {
+                        ["interventionId"] = intervention.Id.ToString(),
+                        ["studentId"] = intervention.StudentId.ToString()
+                    });
                     break;
 
                 case "reject":
                     intervention.Status = "Rejected";
                     TempData["SuccessMessage"] = "Study guide rejected.";
+                    _telemetryService.TrackEvent("StudyGuideRejected", new Dictionary<string, string>
+                    {
+                        ["interventionId"] = intervention.Id.ToString(),
+                        ["studentId"] = intervention.StudentId.ToString()
+                    });
                     break;
 
                 case "modify":
                     // Update the content with modified model
-                    intervention.Content = System.Text.Json.JsonSerializer.Serialize(model);
+                    intervention.Content = System.Text.Json.JsonSerializer.Serialize(new StudyGuideInterventionContent
+                    {
+                        StudyGuide = model,
+                        AdvisorChanges = model.AdvisorModified ? new List<string> { "ModifiedByAdvisorReview" } : new List<string>()
+                    });
                     intervention.Status = "Modified";
                     TempData["SuccessMessage"] = "Study guide updated and saved.";
+                    _telemetryService.TrackEvent("StudyGuideModified", new Dictionary<string, string>
+                    {
+                        ["interventionId"] = intervention.Id.ToString(),
+                        ["studentId"] = intervention.StudentId.ToString()
+                    });
                     break;
             }
 
@@ -263,6 +315,36 @@ namespace StudentTrackingCoach.Controllers
                 100 => 100,
                 _ => 20
             };
+        }
+
+        private static RecommendedStudyGuideViewModel? ExtractStudyGuideFromContent(string content)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return null;
+            }
+
+            try
+            {
+                var wrapped = System.Text.Json.JsonSerializer.Deserialize<StudyGuideInterventionContent>(content);
+                if (wrapped?.StudyGuide != null)
+                {
+                    return wrapped.StudyGuide;
+                }
+            }
+            catch
+            {
+                // Legacy payload fallback below.
+            }
+
+            try
+            {
+                return System.Text.Json.JsonSerializer.Deserialize<RecommendedStudyGuideViewModel>(content);
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

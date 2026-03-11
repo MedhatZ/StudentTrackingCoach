@@ -123,21 +123,37 @@
         <div class="menu-section">MAIN</div>
         <a asp-controller="Home" asp-action="Index">📊 Dashboard</a>
         <a asp-controller="Students" asp-action="MyGradPath">🎓 My Grad Path</a>
-        
-        <div class="menu-section">STUDENTS</div>
-        <a asp-controller="Students" asp-action="Index">👥 All Students</a>
-        <a asp-controller="Advisor" asp-action="Index">📋 Advisor View</a>
-        
+
+        @if (User.IsInRole("Admin") || User.IsInRole("Advisor"))
+        {
+            <div class="menu-section">STUDENTS</div>
+            <a asp-controller="Students" asp-action="Index">👥 All Students</a>
+            <a asp-controller="Advisor" asp-action="Index">📋 Advisor View</a>
+        }
+
         <div class="menu-section">TASKS & REVIEWS</div>
-        <a asp-controller="Tasks" asp-action="Index">✅ Tasks</a>
-        <a asp-controller="Advisor" asp-action="PendingReviews">⏳ Pending Reviews</a>
-        <a asp-controller="Students" asp-action="MyStudyGuides">📚 My Study Guides</a>
+        @if (User.IsInRole("Admin") || User.IsInRole("Advisor"))
+        {
+            <a asp-controller="Tasks" asp-action="Index">✅ Tasks</a>
+            <a asp-controller="Advisor" asp-action="PendingReviews">⏳ Pending Reviews</a>
+        }
+        @if (User.IsInRole("Student") || User.IsInRole("Admin"))
+        {
+            <a asp-controller="Students" asp-action="MyStudyGuides">📚 My Study Guides</a>
+        }
 
         @if (User.IsInRole("Admin"))
         {
             <div class="menu-section">ADMIN</div>
             <a asp-controller="Admin" asp-action="Users">👤 Manage Users</a>
             <a asp-controller="Admin" asp-action="DataQuality">📊 Data Quality</a>
+            <a asp-controller="Admin" asp-action="HealthCheck">🩺 Health Check</a>
+        }
+
+        @if (User.IsInRole("SuperAdmin"))
+        {
+            <div class="menu-section">SUPER ADMIN</div>
+            <a asp-controller="SuperAdmin" asp-action="Tenants">🏢 Tenants</a>
         }
     </div>
 
@@ -175,5 +191,6 @@
     </div>
 
     @RenderSection("Scripts", required: false)
+    <partial name="_RUM" />
 </body>
 </html>

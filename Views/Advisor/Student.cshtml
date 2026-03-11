@@ -4,6 +4,8 @@
     ViewData["Title"] = "Student Advisory Review";
     var coursesVm = ViewBag.StudentCourses as StudentTrackingCoach.Models.ViewModels.StudentCoursesViewModel;
     var passingThreshold = (decimal)(ViewBag.PassingThreshold ?? 70m);
+    var aiRecommendation = ViewBag.AiRecommendation as StudentTrackingCoach.Models.Ai.AiRecommendationResult;
+    var showConfidenceScore = (bool)(ViewBag.ShowConfidenceScore ?? false);
 }
 
 <div class="d-flex align-items-center justify-content-between mb-3">
@@ -53,6 +55,43 @@
                 <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(Model.SecondaryRiskDriver) ? Model.SecondaryRiskDriver : "—")</div>
             </div>
         </div>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+<!-- ========================= -->
+<!-- AI SUMMARY SIDEBAR -->
+<!-- ========================= -->
+<div class="card shadow-sm mb-4 border-primary">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">🤖 AI Recommendation Summary</h5>
+        <a asp-action="Student"
+           asp-route-id="@Model.StudentId"
+           asp-route-regenerateAi="true"
+           class="btn btn-sm btn-outline-primary">
+            Regenerate AI Recommendations
+        </a>
+    </div>
+    <div class="card-body">
+        @if (aiRecommendation == null)
+        {
+            <p class="text-muted mb-0"><em>No AI recommendation available.</em></p>
+        }
+        else
+        {
+            <div class="mb-2"><strong>Focus Areas:</strong> @aiRecommendation.FocusAreas</div>
+            <div class="mb-2"><strong>Schedule:</strong> @aiRecommendation.StudySchedule</div>
+            <div class="mb-2"><strong>Techniques:</strong> @aiRecommendation.StudyTechniques</div>
+            <div class="mb-2"><strong>Expected Outcome:</strong> @aiRecommendation.ExpectedOutcome</div>
+            @if (showConfidenceScore && aiRecommendation.ConfidenceScore.HasValue)
+            {
+                <span class="badge bg-secondary">Confidence: @((aiRecommendation.ConfidenceScore.Value * 100).ToString("0"))%</span>
+            }
+        }
     </div>
 </div>
 

@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using StudentTrackingCoach.Data;
 using StudentTrackingCoach.Models;
 using StudentTrackingCoach.Models.ViewModels;
 using StudentTrackingCoach.Services.Implementations;
+using StudentTrackingCoach.Services.Interfaces;
 
 namespace StudentTrackingCoach.Controllers
 {
@@ -15,15 +18,42 @@ namespace StudentTrackingCoach.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ApplicationDbContext _db;
+        private readonly IAiUsageTrackingService _aiUsageTracking;
+        private readonly IConfigurationValidationService _configurationValidationService;
+        private readonly IMemoryCache _memoryCache;
+        private readonly IAiRecommendationService _aiRecommendationService;
+        private readonly IConfiguration _configuration;
+        private readonly IRiskCalculationService _riskCalculationService;
+        private readonly ITelemetryService _telemetryService;
+        private readonly ICacheService _cacheService;
+        private readonly ITenantService _tenantService;
 
         public AdminController(
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            ApplicationDbContext db)
+            ApplicationDbContext db,
+            IAiUsageTrackingService aiUsageTracking,
+            IConfigurationValidationService configurationValidationService,
+            IMemoryCache memoryCache,
+            IAiRecommendationService aiRecommendationService,
+            IConfiguration configuration,
+            IRiskCalculationService riskCalculationService,
+            ITelemetryService telemetryService,
+            ICacheService cacheService,
+            ITenantService tenantService)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _db = db;
+            _aiUsageTracking = aiUsageTracking;
+            _configurationValidationService = configurationValidationService;
+            _memoryCache = memoryCache;
+            _aiRecommendationService = aiRecommendationService;
+            _configuration = configuration;
+            _riskCalculationService = riskCalculationService;
+            _telemetryService = telemetryService;
+            _cacheService = cacheService;
+            _tenantService = tenantService;
         }
 
         // =====================================================
@@ -82,65 +112,161 @@ namespace StudentTrackingCoach.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> DataQuality()
+        public async Task<IActionResult> HealthCheck()
         {
-            var vm = new AdminDataQualityViewModel();
-
-            // Get all students
-            var students = await _db.Students.ToListAsync();
-            vm.TotalStudents = students.Count;
-
-            // Count students with notes
-            var studentsWithNotes = await _db.AdvisorNotes
-                .Select(n => n.StudentId)
-                .Distinct()
-                .CountAsync();
-            vm.StudentsWithNotes = studentsWithNotes;
-
-            // Calculate risk for each student (using existing service)
-            var riskService = new RiskCalculationService(_db);
-
-            foreach (var student in students.Take(20)) // Limit for performance
+            _telemetryService.TrackEvent("AdminHealthCheckViewed");
+            var vm = new AdminHealthCheckViewModel
             {
-                var riskLevel = await riskService.CalculateStudentRiskLevelAsync(student.StudentId);
+                AzureOpenAiConfigured = _configurationValidationService.IsAzureOpenAiConfigured(),
+                AzureOpenAiStatus = _configurationValidationService.GetConfigurationStatus(),
+                MockFallbackActive = !_configuration.GetValue<bool>("AiFeatures:Enabled") ||
+                                     !_configuration.GetValue<bool>("AiFeatures:UseRealAi") ||
+                                     !_configurationValidationService.IsAzureOpenAiConfigured(),
+                AiServiceType = _aiRecommendationService.GetType().Name,
+                LastAiTestResult = TempData["AiTestResult"] as string,
+                RedisEnabled = _configuration.GetValue<bool>("Redis:Enabled"),
+                RedisConfigured = !string.IsNullOrWhiteSpace(_configuration["Redis:ConnectionString"]),
+                ApplicationInsightsEnabled = _configuration.GetValue<bool>("ApplicationInsights:Enabled"),
+                ApplicationInsightsConfigured = !string.IsNullOrWhiteSpace(_configuration["ApplicationInsights:ConnectionString"])
+            };
 
-                switch (riskLevel)
-                {
-                    case "High": vm.HighRiskStudents++; break;
-                    case "Medium": vm.MediumRiskStudents++; break;
-                    default: vm.LowRiskStudents++; break;
-                }
+            vm.DatabaseConnected = await _db.Database.CanConnectAsync();
 
-                // Check for data issues
-                if (student.IsFirstGen == null)
-                {
-                    vm.StudentsWithIssues.Add(new StudentDataIssue
-                    {
-                        StudentId = student.StudentId,
-                        Issue = "Missing FirstGen data"
-                    });
-                }
+            var cacheProbeKey = "admin-health-cache-probe";
+            _memoryCache.Set(cacheProbeKey, DateTime.UtcNow, TimeSpan.FromMinutes(1));
+            vm.CacheAvailable = _memoryCache.TryGetValue(cacheProbeKey, out _);
+            vm.CacheStatus = vm.CacheAvailable ? "In-memory cache operational" : "Cache unavailable";
+            vm.RedisStatus = vm.RedisEnabled
+                ? (vm.RedisConfigured ? "Redis enabled and configured" : "Redis enabled but connection string missing")
+                : "Redis disabled (memory cache fallback active)";
+            vm.ApplicationInsightsStatus = vm.ApplicationInsightsEnabled
+                ? (vm.ApplicationInsightsConfigured ? "Application Insights configured" : "Application Insights enabled but connection string missing")
+                : "Application Insights disabled (null telemetry active)";
 
-                if (student.IsWorking == null)
-                {
-                    vm.StudentsWithIssues.Add(new StudentDataIssue
-                    {
-                        StudentId = student.StudentId,
-                        Issue = "Missing Employment data"
-                    });
-                }
-
-                if (string.IsNullOrEmpty(student.EnrollmentStatus))
-                {
-                    vm.StudentsWithIssues.Add(new StudentDataIssue
-                    {
-                        StudentId = student.StudentId,
-                        Issue = "Missing Enrollment Status"
-                    });
-                }
+            try
+            {
+                await _cacheService.SetAsync("healthcheck:cache", "ok", TimeSpan.FromMinutes(1));
+                vm.CacheAvailable = vm.CacheAvailable && await _cacheService.ExistsAsync("healthcheck:cache");
+            }
+            catch
+            {
+                vm.CacheAvailable = false;
+                vm.CacheStatus = "Configured cache service not available";
             }
 
             return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TestAiConnection()
+        {
+            try
+            {
+                var testStudentId = await _db.Students
+                    .AsNoTracking()
+                    .Select(s => s.StudentId)
+                    .FirstOrDefaultAsync();
+                if (testStudentId <= 0)
+                {
+                    testStudentId = 100001;
+                }
+
+                var result = await _aiRecommendationService.GenerateRecommendationsAsync(testStudentId);
+                TempData["AiTestResult"] = $"AI test succeeded via {_aiRecommendationService.GetType().Name}. Outcome: {result.ExpectedOutcome}";
+                _telemetryService.TrackEvent("AdminAiConnectionTestSucceeded");
+            }
+            catch (Exception ex)
+            {
+                TempData["AiTestResult"] = $"AI test failed: {ex.Message}";
+                _telemetryService.TrackException(ex, new Dictionary<string, string>
+                {
+                    ["component"] = "AdminController.TestAiConnection"
+                });
+            }
+
+            return RedirectToAction(nameof(HealthCheck));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DataQuality()
+        {
+            _telemetryService.TrackEvent("AdminDataQualityViewed");
+            var vm = new AdminDataQualityViewModel();
+
+            try
+            {
+                // Get all students
+                var students = await _db.Students.ToListAsync();
+                vm.TotalStudents = students.Count;
+
+                // Count students with notes
+                var studentsWithNotes = await _db.AdvisorNotes
+                    .Select(n => n.StudentId)
+                    .Distinct()
+                    .CountAsync();
+                vm.StudentsWithNotes = studentsWithNotes;
+
+                foreach (var student in students.Take(20)) // Limit for performance
+                {
+                    var riskLevel = await _riskCalculationService.CalculateStudentRiskLevelAsync(student.StudentId);
+
+                    switch (riskLevel)
+                    {
+                        case "High": vm.HighRiskStudents++; break;
+                        case "Medium": vm.MediumRiskStudents++; break;
+                        default: vm.LowRiskStudents++; break;
+                    }
+
+                    // Check for data issues
+                    if (student.IsFirstGen == null)
+                    {
+                        vm.StudentsWithIssues.Add(new StudentDataIssue
+                        {
+                            StudentId = student.StudentId,
+                            Issue = "Missing FirstGen data"
+                        });
+                    }
+
+                    if (student.IsWorking == null)
+                    {
+                        vm.StudentsWithIssues.Add(new StudentDataIssue
+                        {
+                            StudentId = student.StudentId,
+                            Issue = "Missing Employment data"
+                        });
+                    }
+
+                    if (string.IsNullOrEmpty(student.EnrollmentStatus))
+                    {
+                        vm.StudentsWithIssues.Add(new StudentDataIssue
+                        {
+                            StudentId = student.StudentId,
+                            Issue = "Missing Enrollment Status"
+                        });
+                    }
+                }
+
+                var today = DateOnly.FromDateTime(DateTime.UtcNow);
+                vm.AiUsageMetrics = _aiUsageTracking.GetMetricsForDay(today);
+                vm.AiCallsToday = vm.AiUsageMetrics.Sum(x => x.TotalCalls);
+                vm.AiFallbacksToday = vm.AiUsageMetrics.Sum(x => x.FallbackCalls);
+                _telemetryService.TrackMetric("Admin.AiCallsToday", vm.AiCallsToday);
+                _telemetryService.TrackMetric("Admin.AiFallbacksToday", vm.AiFallbacksToday);
+
+                return View(vm);
+            }
+            catch (SqlException ex) when (ex.Message.Contains("Invalid column name 'TenantId'", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["ErrorMessage"] =
+                    "Database schema is not up to date. Please apply multi-tenant migration using: dotnet ef database update --context ApplicationDbContext";
+                _telemetryService.TrackException(ex, new Dictionary<string, string>
+                {
+                    ["component"] = "AdminController.DataQuality",
+                    ["errorType"] = "MissingTenantColumn"
+                });
+                return View(vm);
+            }
         }
 
         // =====================================================
@@ -323,7 +449,8 @@ namespace StudentTrackingCoach.Controllers
             {
                 Action = action,
                 TargetUserId = targetUserId,
-                PerformedByUserId = _userManager.GetUserId(User) ?? "SYSTEM"
+                PerformedByUserId = _userManager.GetUserId(User) ?? "SYSTEM",
+                TenantId = _tenantService.CurrentTenantId
             };
 
             _db.AdminAuditLogs.Add(log);

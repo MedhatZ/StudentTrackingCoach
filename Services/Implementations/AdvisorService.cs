@@ -10,11 +10,13 @@ namespace StudentTrackingCoach.Services.Implementations
     {
         private readonly ApplicationDbContext _db;
         private readonly IRiskCalculationService _riskService;
+        private readonly ITenantService _tenantService;
         
-        public AdvisorService(ApplicationDbContext db, IRiskCalculationService riskService)
+        public AdvisorService(ApplicationDbContext db, IRiskCalculationService riskService, ITenantService tenantService)
         {
             _db = db;
             _riskService = riskService;
+            _tenantService = tenantService;
         }
         
         public async Task<List<AdvisorRiskDashboardDto>> GetStudentsRequiringAttentionAsync(string advisorId)
@@ -145,6 +147,7 @@ namespace StudentTrackingCoach.Services.Implementations
                 var note = new AdvisorNote
                 {
                     StudentId = input.StudentId,
+                    TenantId = _tenantService.CurrentTenantId,
                     AdvisorUserId = advisorUserId,
                     ActionTaken = input.ActionTaken,
                     Notes = input.Notes,

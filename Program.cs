@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StudentTrackingCoach.Data;
+using StudentTrackingCoach.Middleware;
 using StudentTrackingCoach.Models;
 using StudentTrackingCoach.Services.Implementations;
 using StudentTrackingCoach.Services.Interfaces;
@@ -43,11 +44,80 @@ builder.Services.ConfigureApplicationCookie(options =>
 // ================================
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient();
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
 builder.Services.AddScoped<IAdvisorService, AdvisorService>();
 builder.Services.AddScoped<IRiskCalculationService, RiskCalculationService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
-builder.Services.AddDistributedMemoryCache();
+builder.Services.AddScoped<IRUMService, ApplicationInsightsRUMService>();
+builder.Services.AddSingleton<IAiUsageTrackingService, AiUsageTrackingService>();
+builder.Services.AddSingleton<IConfigurationValidationService, ConfigurationValidationService>();
+if (builder.Configuration.GetValue<bool>("ApplicationInsights:Enabled") &&
+    !string.IsNullOrWhiteSpace(builder.Configuration["ApplicationInsights:ConnectionString"]))
+{
+    builder.Services.AddApplicationInsightsTelemetry(options =>
+    {
+        options.ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
+    });
+    builder.Services.AddSingleton<ITelemetryService, ApplicationInsightsTelemetryService>();
+}
+else
+{
+    builder.Services.AddSingleton<ITelemetryService, NullTelemetryService>();
+}
+
+if (builder.Configuration.GetValue<bool>("Redis:Enabled") &&
+    !string.IsNullOrWhiteSpace(builder.Configuration["Redis:ConnectionString"]))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = builder.Configuration["Redis:ConnectionString"];
+        options.InstanceName = builder.Configuration["Redis:InstanceName"] ?? "GradPath";
+    });
+    builder.Services.AddScoped<ICacheService, RedisCacheService>();
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+    builder.Services.AddScoped<ICacheService, MemoryCacheFallbackService>();
+}
+
+builder.Services.AddScoped<MockAiRecommendationService>();
+builder.Services.AddScoped<AzureOpenAiRecommendationService>();
+builder.Services.AddScoped<IAiRecommendationService>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("AiServiceFactory");
+    var validator = sp.GetRequiredService<IConfigurationValidationService>();
+    var aiEnabled = config.GetValue<bool>("AiFeatures:Enabled");
+
+    if (!aiEnabled)
+    {
+        logger.LogInformation("AI features disabled. Using Mock AI service.");
+        return sp.GetRequiredService<MockAiRecommendationService>();
+    }
+
+    var useRealAi = config.GetValue<bool>("AiFeatures:UseRealAi");
+    if (!useRealAi)
+    {
+        logger.LogInformation("UseRealAi disabled. Using Mock AI service.");
+        return sp.GetRequiredService<MockAiRecommendationService>();
+    }
+
+    var endpoint = config["AzureOpenAI:Endpoint"];
+    var apiKey = config["AzureOpenAI:ApiKey"];
+    if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey) || !validator.IsAzureOpenAiConfigured())
+    {
+        logger.LogWarning("Azure OpenAI Endpoint/ApiKey missing. Using Mock AI service.");
+        return sp.GetRequiredService<MockAiRecommendationService>();
+    }
+
+    logger.LogInformation("Azure OpenAI configuration valid. Using AzureOpenAiRecommendationService.");
+    return sp.GetRequiredService<AzureOpenAiRecommendationService>();
+});
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -73,6 +143,7 @@ app.UseRouting();
 app.UseSession();
 
 app.UseAuthentication();
+app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
 
 // ================================
@@ -95,6 +166,20 @@ if (app.Environment.IsDevelopment())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
+        var defaultTenantId = builder.Configuration.GetValue<int?>("MultiTenant:DefaultTenantId") ?? 1;
+
+        if (!context.Tenants.Any())
+        {
+            context.Tenants.Add(new Tenant
+            {
+                TenantId = defaultTenantId,
+                Name = "Default Institution",
+                Slug = "default",
+                PassingGrade = builder.Configuration.GetValue<int?>("RiskThresholds:PassingGrade") ?? 70,
+                IsActive = true
+            });
+            context.SaveChanges();
+        }
 
         // -------------------------------
         // SEED ADVISORS
@@ -117,6 +202,7 @@ if (app.Environment.IsDevelopment())
                 new Student
                 {
                     StudentId = 100001,
+                    TenantId = defaultTenantId,
                     InstitutionId = 1,
                     EnrollmentStatus = "Active",
                     IsFirstGen = true,
@@ -127,6 +213,7 @@ if (app.Environment.IsDevelopment())
                 new Student
                 {
                     StudentId = 100002,
+                    TenantId = defaultTenantId,
                     InstitutionId = 1,
                     EnrollmentStatus = "Probation",
                     IsFirstGen = false,

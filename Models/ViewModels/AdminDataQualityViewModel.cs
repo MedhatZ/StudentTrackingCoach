@@ -8,6 +8,9 @@ namespace StudentTrackingCoach.Models.ViewModels
         public int MediumRiskStudents { get; set; }
         public int LowRiskStudents { get; set; }
         public List<StudentDataIssue> StudentsWithIssues { get; set; } = new();
+        public int AiCallsToday { get; set; }
+        public int AiFallbacksToday { get; set; }
+        public List<AiUsageMetricViewModel> AiUsageMetrics { get; set; } = new();
     }
 
     public class StudentDataIssue

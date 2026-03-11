@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 
 namespace StudentTrackingCoach.Models
 {
-    public class AdvisorNote
+    public class AdvisorNote : ITenantScopedEntity
     {
         public long AdvisorNoteId { get; set; }
 
         public long StudentId { get; set; }
+        public int TenantId { get; set; } = 1;
 
         public string AdvisorUserId { get; set; } = string.Empty;
 

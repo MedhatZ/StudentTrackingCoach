@@ -14,6 +14,11 @@
             <form asp-action="SaveStudyGuide" method="post">
 
                 <input type="hidden" asp-for="StudentId" />
+                <input type="hidden" asp-for="GeneratedBy" />
+                <input type="hidden" asp-for="GeneratedAt" />
+                <input type="hidden" asp-for="ConfidenceScore" />
+                <input type="hidden" asp-for="IsAIGenerated" />
+                <input type="hidden" asp-for="AdvisorModified" />
 
                 @{
                     // Determine risk level from data
@@ -27,6 +32,25 @@
                                     riskLevel == "Medium" ? "alert-warning" : "alert-info") mb-4">
                     <strong>Risk Level: @riskLevel</strong> -
                     This study guide is personalized based on current academic standing.
+                </div>
+
+                @if (ViewBag.AIGenerated == true)
+                {
+                    <div class="alert alert-primary mb-4">
+                        <strong>🤖 AI-Generated Recommendation</strong>
+                    </div>
+                }
+
+                <div class="alert alert-light border mb-4">
+                    <strong>Recommendation Source:</strong> @Model.GeneratedBy
+                    @if (Model.GeneratedAt.HasValue)
+                    {
+                        <span class="ms-2 text-muted">(@Model.GeneratedAt.Value.ToLocalTime().ToString("MM/dd/yyyy HH:mm"))</span>
+                    }
+                    @if (ViewBag.ShowConfidenceScore == true && Model.ConfidenceScore.HasValue)
+                    {
+                        <span class="ms-2 badge bg-secondary">Confidence: @((Model.ConfidenceScore.Value * 100).ToString("0"))%</span>
+                    }
                 </div>
 
                 <!-- Risk Drivers Summary -->

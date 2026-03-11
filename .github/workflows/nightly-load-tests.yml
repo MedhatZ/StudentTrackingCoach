@@ -1,0 +1,47 @@
+name: Nightly Load Tests
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  k6-load-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Run normal profile
+        run: |
+          k6 run LoadTests/k6-scripts/mixed-workload.js \
+            --env BASE_URL="${{ secrets.LOAD_TEST_BASE_URL }}" \
+            --env TEST_TYPE=normal \
+            --summary-export=loadtest-normal-summary.json
+
+      - name: Run peak profile
+        run: |
+          k6 run LoadTests/k6-scripts/mixed-workload.js \
+            --env BASE_URL="${{ secrets.LOAD_TEST_BASE_URL }}" \
+            --env TEST_TYPE=peak \
+            --summary-export=loadtest-peak-summary.json
+
+      - name: Run soak profile
+        run: |
+          k6 run LoadTests/k6-scripts/mixed-workload.js \
+            --env BASE_URL="${{ secrets.LOAD_TEST_BASE_URL }}" \
+            --env TEST_TYPE=soak \
+            --summary-export=loadtest-soak-summary.json
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-k6-results
+          path: |
+            loadtest-normal-summary.json
+            loadtest-peak-summary.json
+            loadtest-soak-summary.json

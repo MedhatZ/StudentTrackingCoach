@@ -29,5 +29,10 @@ namespace StudentTrackingCoach.Models.ViewModels
         public DateTime? CreatedAt { get; set; }
         public DateTime? FollowUpDate { get; set; }
         public string? ExpectedOutcome { get; set; }
+        public string GeneratedBy { get; set; } = "Advisor";
+        public DateTime? GeneratedAt { get; set; }
+        public double? ConfidenceScore { get; set; }
+        public bool IsAIGenerated { get; set; }
+        public bool AdvisorModified { get; set; }
     }
 }

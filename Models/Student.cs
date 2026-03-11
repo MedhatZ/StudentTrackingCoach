@@ -6,13 +6,14 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace StudentTrackingCoach.Models
 {
     [Table("Student", Schema = "dbo")]
-    public class Student
+    public class Student : ITenantScopedEntity
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
         public long StudentId { get; set; }
 
         public int InstitutionId { get; set; }
+        public int TenantId { get; set; } = 1;
 
         public string? EnrollmentStatus { get; set; }
 

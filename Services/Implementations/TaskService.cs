@@ -127,6 +127,19 @@ namespace StudentTrackingCoach.Services.Implementations
 
             try
             {
+                var wrapped = System.Text.Json.JsonSerializer.Deserialize<StudyGuideInterventionContent>(content);
+                if (wrapped?.StudyGuide != null)
+                {
+                    return wrapped.StudyGuide;
+                }
+            }
+            catch
+            {
+                // Fallback to legacy payload below.
+            }
+
+            try
+            {
                 return System.Text.Json.JsonSerializer.Deserialize<RecommendedStudyGuideViewModel>(content);
             }
             catch

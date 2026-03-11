@@ -1,0 +1,42 @@
+@model StudentTrackingCoach.Models.Tenant
+
+@{
+    ViewData["Title"] = "Create Tenant";
+}
+
+<h2>Create Tenant</h2>
+
+<form asp-action="CreateTenant" method="post" class="mt-3">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Slug" class="form-label"></label>
+        <input asp-for="Slug" class="form-control" />
+        <span asp-validation-for="Slug" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="ConnectionString" class="form-label"></label>
+        <input asp-for="ConnectionString" class="form-control" />
+        <span asp-validation-for="ConnectionString" class="text-danger"></span>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="PassingGrade" class="form-label"></label>
+            <input asp-for="PassingGrade" class="form-control" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="HighRiskThreshold" class="form-label"></label>
+            <input asp-for="HighRiskThreshold" class="form-control" />
+        </div>
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="IsActive" class="form-check-input" />
+        <label asp-for="IsActive" class="form-check-label"></label>
+    </div>
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a asp-action="Tenants" class="btn btn-link">Back</a>
+</form>

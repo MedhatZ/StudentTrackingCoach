@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 
 namespace StudentTrackingCoach.Models
 {
@@ -14,5 +14,7 @@ namespace StudentTrackingCoach.Models
 
         // Optional future expansion
         public int? InstitutionId { get; set; }
+
+        public ICollection<TenantUserRole> TenantRoles { get; set; } = new List<TenantUserRole>();
     }
 }
