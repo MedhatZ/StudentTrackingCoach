@@ -1,174 +1,3 @@
-<<<<<<< HEAD
-# Student Tracking Coach
-
-## Azure OpenAI Integration
-
-This project supports both Azure OpenAI and a mock AI fallback service.  
-Do not store real API keys in `appsettings.json` for shared repos.
-
-## 🔐 Azure OpenAI Configuration
-
-### 1️⃣ Local Development (User Secrets) - Recommended
-
-```bash
-# Initialize user secrets (if not already done)
-dotnet user-secrets init
-
-# Set your Azure OpenAI credentials
-dotnet user-secrets set "AzureOpenAI:Endpoint" "https://your-resource.openai.azure.com/"
-dotnet user-secrets set "AzureOpenAI:ApiKey" "your-api-key"
-dotnet user-secrets set "AzureOpenAI:DeploymentName" "gpt-4"
-dotnet user-secrets set "AzureOpenAI:ApiVersion" "2024-02-15-preview"
-```
-
-### 2️⃣ Feature Flags
-
-Configure AI behavior in `appsettings.json`:
-
-- `AiFeatures:Enabled` - master switch for AI generation.
-- `AiFeatures:UseRealAi` - when true, use Azure OpenAI if configuration is valid.
-- `AiFeatures:UseMockService` - optional compatibility flag.
-- `AiFeatures:CacheDurationHours` - recommendation cache TTL.
-- `AiFeatures:MaxRecommendationsPerDay` - per-advisor daily soft limit.
-
-### 3️⃣ Fallback Behavior
-
-- If Azure OpenAI is not configured or fails at runtime, the system automatically falls back to `MockAiRecommendationService`.
-- Failures are logged and visible in the admin health/data quality views.
-
-## Redis Cache
-
-### Local Development
-
-1. Install Redis locally (or use Docker):
-
-```bash
-docker run --name gradpath-redis -p 6379:6379 -d redis:7
-```
-
-2. Configure:
-- `Redis:Enabled=true`
-- `Redis:ConnectionString=localhost:6379`
-- `Redis:InstanceName=GradPath`
-
-If Redis is disabled or unavailable, the app automatically uses `MemoryCacheFallbackService`.
-
-### Production
-
-- Use a managed Redis service (Azure Cache for Redis recommended).
-- Set connection string via environment variables or secret manager.
-
-## Application Insights
-
-Configure:
-
-- `ApplicationInsights:Enabled=true`
-- `ApplicationInsights:ConnectionString=<your-connection-string>`
-- `ApplicationInsights:CloudRoleName=GradPath-API`
-
-If disabled or not configured, telemetry falls back to `NullTelemetryService`.
-
-## Testing
-
-![Coverage](https://img.shields.io/badge/coverage-enabled-brightgreen)
-
-Run unit tests:
-
-```bash
-dotnet test StudentTrackingCoach.Tests/StudentTrackingCoach.Tests.csproj
-```
-
-Run with coverage:
-
-```bash
-dotnet test StudentTrackingCoach.Tests/StudentTrackingCoach.Tests.csproj --collect:"XPlat Code Coverage"
-```
-
-## Multi-Tenant Support
-
-The platform now includes first-pass multi-tenant support with tenant resolution, tenant-scoped entities, and super-admin tenant management.
-
-- Resolution modes:
-  - `Subdomain` (for `tenant1.gradpath.com`)
-  - `Header` (`X-Tenant-ID`)
-- Toggle in `appsettings.json`:
-  - `MultiTenant:Enabled`
-  - `MultiTenant:ResolutionMode`
-  - `MultiTenant:DefaultTenantId`
-- New entities:
-  - `Tenant`
-  - `TenantFeature`
-  - `TenantUserRole`
-- Tenant-aware data isolation:
-  - Global query filters on `Student`, `AdvisorNotes`, `Interventions`, and `AdminAuditLogs`
-  - Tenant indexes for high-cardinality query paths
-- Super admin tools:
-  - `/SuperAdmin/Tenants`
-  - `/SuperAdmin/CreateTenant`
-  - `/SuperAdmin/TenantDetails/{id}`
-  - tenant switching via session (`SelectedTenantId`)
-
-Apply the migration:
-
-```bash
-dotnet ef database update
-```
-
-## Real User Monitoring (RUM)
-
-RUM is wired to Application Insights telemetry via a client-side tracker + ingestion endpoint.
-
-- Enable in `appsettings.json` under `RealUserMonitoring`
-- Client script: `wwwroot/js/rum-tracker.js`
-- Partial include: `Views/Shared/_RUM.cshtml`
-- API ingestion:
-  - `POST /rum/page-view`
-  - `POST /rum/action`
-- Server service: `ApplicationInsightsRUMService`
-
-Tracked metrics include:
-
-- TTFB
-- First Contentful Paint
-- Time to Interactive
-- Page load completion
-- device/browser/screen footprint
-- coarse region (timezone-derived)
-
-Recommended Azure alert rules:
-
-- p95 page load > 3 seconds for 5 minutes
-- JS/action tracking failure > 1%
-
-## Load Testing
-
-Load tests are provided with k6 scripts for advisor, student, and mixed workloads.
-
-- Scripts:
-  - `LoadTests/k6-scripts/advisor-flow.js`
-  - `LoadTests/k6-scripts/student-flow.js`
-  - `LoadTests/k6-scripts/mixed-workload.js`
-- Config: `LoadTests/config/options.json`
-- Results template: `LoadTests/results/README.md`
-- CI nightly workflow: `.github/workflows/nightly-load-tests.yml`
-
-Run examples:
-
-```bash
-k6 run LoadTests/k6-scripts/mixed-workload.js --env BASE_URL=https://your-env --env TEST_TYPE=normal
-k6 run LoadTests/k6-scripts/mixed-workload.js --env BASE_URL=https://your-env --env TEST_TYPE=peak
-k6 run LoadTests/k6-scripts/mixed-workload.js --env BASE_URL=https://your-env --env TEST_TYPE=stress
-k6 run LoadTests/k6-scripts/mixed-workload.js --env BASE_URL=https://your-env --env TEST_TYPE=soak
-```
-
-Target benchmarks:
-
-- p95 response time `< 2s`
-- CPU `< 70%` at peak
-- memory `< 80%` at peak
-- zero functional errors at expected load
-=======
-markdown
 # 🎓 Grad Path – Student Success & Early-Alert Platform
 
 [![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-8.0-purple)](https://dotnet.microsoft.com/)
@@ -188,13 +17,11 @@ The platform enables institutions to:
 - Surface risk insights in **advisor dashboards**
 - Assign **structured interventions** (Study Guides, Tasks)
 - Log all actions for **accountability and audit**
-- Generate **AI-powered study recommendations** (Phase 2)
+- Generate **AI-powered study recommendations**
 
 ---
 
-## ✅ **Phase 1 – Complete**
-
-Phase 1 establishes a **solid, production-ready foundation**:
+## ✅ **Phase 1 – Foundation (Complete)**
 
 | Feature | Status |
 |--------|--------|
@@ -208,12 +35,17 @@ Phase 1 establishes a **solid, production-ready foundation**:
 
 ---
 
-## 🚀 **Phase 2 – Coming Soon**
+## 🚀 **Phase 2 – AI Integration (Complete)**
 
-- AI-powered Study Guide using structured academic signals
-- Personalized recommendations (Focus Areas, Schedule, Techniques)
-- Advisor approval workflow
-- Outcome tracking (did the student improve?)
+| Feature | Status |
+|--------|--------|
+| AI-Powered Study Guide | ✅ Personalized recommendations based on risk level |
+| Mock AI Service | ✅ Rule-based, works out-of-the-box |
+| Real AI (Azure OpenAI) | ✅ Ready – just add your API key |
+| AI Usage Tracking | ✅ Monitor calls and fallbacks |
+| Caching | ✅ Redis + Memory fallback |
+| Telemetry | ✅ Application Insights integration |
+| Advisor Modification | ✅ Track changes to AI recommendations |
 
 ---
 
@@ -223,37 +55,115 @@ Phase 1 establishes a **solid, production-ready foundation**:
 - **Database:** SQL Server + Entity Framework Core 8
 - **Authentication:** ASP.NET Core Identity
 - **Frontend:** Razor Views + Bootstrap 5
-- **AI (Phase 2):** Azure OpenAI / Mock Service (pluggable)
+- **AI:** Azure OpenAI / Mock Service (pluggable)
+- **Cache:** Redis / Memory Cache
+- **Monitoring:** Application Insights
+- **Load Testing:** k6
+- **CI/CD:** GitHub Actions
 
 ---
 
-## 📂 **Database Schema**
+## 🔐 **Azure OpenAI Configuration**
 
-### Core Tables
-- `Students` – Student demographic data
-- `Courses` – Course catalog
-- `Enrollments` – Student-course enrollment
-- `Grades` – Student grades per assignment/course
-
-### Success Tracking
-- `Interventions` – All study guides and actions (canonical table)
-- `AdvisorNotes` – Advisor comments and flags
-- `Tasks` – Derived from `Interventions` (Pending/Completed)
-
-### Identity
-- `AspNetUsers` – ApplicationUser with `StudentId` and `AdvisorId`
-
----
-
-## ⚙️ **Setup Instructions**
-
-### Prerequisites
-- [.NET SDK 8.0+](https://dotnet.microsoft.com/download)
-- [SQL Server](https://www.microsoft.com/sql-server) (LocalDB, Express, or Azure SQL)
-- [Git](https://git-scm.com/)
-
-### 1. Clone the Repository
+### Local Development (User Secrets) - Recommended
 ```bash
+dotnet user-secrets init
+dotnet user-secrets set "AzureOpenAI:Endpoint" "https://your-resource.openai.azure.com/"
+dotnet user-secrets set "AzureOpenAI:ApiKey" "your-api-key"
+dotnet user-secrets set "AzureOpenAI:DeploymentName" "gpt-4"
+dotnet user-secrets set "AzureOpenAI:ApiVersion" "2024-02-15-preview"
+Feature Flags
+Configure in appsettings.json:
+
+AiFeatures:Enabled – master switch
+
+AiFeatures:UseRealAi – use Azure OpenAI when configured
+
+AiFeatures:CacheDurationHours – recommendation cache TTL (default 24h)
+
+AiFeatures:MaxRecommendationsPerDay – per-advisor daily limit
+
+Fallback Behavior
+If Azure OpenAI is not configured or fails, system automatically falls back to Mock AI
+
+Failures are logged and visible in Admin dashboard
+
+🟢 Redis Cache
+Local Development
+bash
+docker run --name gradpath-redis -p 6379:6379 -d redis:7
+Configure:
+
+Redis:Enabled=true
+
+Redis:ConnectionString=localhost:6379
+
+Redis:InstanceName=GradPath
+
+If Redis is disabled/unavailable, app uses MemoryCacheFallbackService.
+
+📊 Application Insights
+Configure:
+
+ApplicationInsights:Enabled=true
+
+ApplicationInsights:ConnectionString=<your-connection-string>
+
+ApplicationInsights:CloudRoleName=GradPath-API
+
+If disabled, telemetry falls back to NullTelemetryService.
+
+👥 Multi-Tenant Support
+First-pass multi-tenant support with tenant resolution and super-admin management.
+
+Resolution modes: Subdomain or Header (X-Tenant-ID)
+
+Toggle in appsettings.json: MultiTenant:Enabled
+
+New entities: Tenant, TenantFeature, TenantUserRole
+
+Data isolation via global query filters
+
+Super admin tools: /SuperAdmin/Tenants
+
+Apply migration:
+
+bash
+dotnet ef database update
+📈 Real User Monitoring (RUM)
+Client-side tracking wired to Application Insights:
+
+TTFB, First Contentful Paint, Time to Interactive
+
+Device/browser/screen footprint
+
+Region (timezone-derived)
+
+Enable in appsettings.json under RealUserMonitoring.
+
+🧪 Load Testing
+k6 scripts for advisor, student, and mixed workloads:
+
+LoadTests/k6-scripts/advisor-flow.js
+
+LoadTests/k6-scripts/student-flow.js
+
+LoadTests/k6-scripts/mixed-workload.js
+
+Run example:
+
+bash
+k6 run LoadTests/k6-scripts/mixed-workload.js --env BASE_URL=https://your-env
+⚙️ Setup Instructions
+Prerequisites
+.NET SDK 8.0+
+
+SQL Server
+
+Git
+
+1. Clone Repository
+bash
 git clone https://github.com/MedhatZ/StudentTrackingCoach.git
 cd StudentTrackingCoach
 2. Configure Database
@@ -266,7 +176,7 @@ json
 3. Apply Migrations
 bash
 dotnet ef database update
-4. Run the Application
+4. Run Application
 bash
 dotnet run
 Navigate to https://localhost:5001
@@ -274,42 +184,11 @@ Navigate to https://localhost:5001
 🔑 Default Roles
 Admin – Full system access
 
+SuperAdmin – Multi-tenant management
+
 Advisor – Monitor students, assign interventions
 
 Student – View personal study guides and progress
-
-📊 Key Features Explained
-🔹 Risk Calculation
-Centralized IRiskCalculationService ensures consistent logic across:
-
-Student lists
-
-Advisor dashboards
-
-Study Guide triggers
-
-🔹 Study Guide Flow
-Advisor creates guide for at-risk student
-
-Saved to Interventions table (Status = "Pending")
-
-Advisor reviews and approves
-
-Student sees approved guide in My Study Guides
-
-🔹 Tasks System
-Approved Interventions become Pending Tasks
-
-Completing a task updates status to "Completed"
-
-Tracks advisor follow-ups
-
-🔹 Search + Pagination
-Search by Student ID or Name
-
-Pagination with page size selector (10, 20, 50, 100)
-
-Consistent across all list views
 
 🧪 Testing the App
 Advisor Flow
@@ -317,11 +196,11 @@ Login as Advisor
 
 View Advisor Dashboard → See at-risk students
 
-Click student → Create Study Guide
+Click student → Create Study Guide (AI pre-populates)
 
-Go to Pending Reviews → Approve guide
+Modify if needed → Save → Go to Pending Reviews
 
-Guide appears in student's My Study Guides
+Approve guide → Student sees it in My Study Guides
 
 Student Flow
 Login as Student
@@ -335,21 +214,30 @@ Login as Admin
 
 Manage users in Admin Panel
 
-View Data Quality dashboard
+View Data Quality dashboard with AI metrics
 
-Access all areas (with appropriate messages)
+Check Health Check page for service status
 
-🧠 AI Integration (Phase 2)
-The platform is AI-ready:
+SuperAdmin Flow
+Login as SuperAdmin
 
-Structured signals passed to IAiRecommendationService
+Manage tenants in SuperAdmin Panel
 
-AI generates personalized study plans
+Switch between tenants to test isolation
 
-Output stored in Interventions.PayloadJson (JSON)
-
-Advisor approves before student sees it
-
+📂 Project Structure
+text
+StudentTrackingCoach/
+├── Controllers/
+├── Services/
+│   ├── Interfaces/
+│   └── Implementations/
+├── Models/
+├── Data/
+├── Views/
+├── Migrations/
+├── LoadTests/
+└── StudentTrackingCoach.Tests/
 🤝 Contributing
 Contributions are welcome! Please:
 
@@ -360,12 +248,8 @@ Create a feature branch
 Submit a pull request
 
 📄 License
-This project is licensed under the MIT License – see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 📬 Contact
-Project Lead: Medhat Zaki
-📧 Email: [your-email@example.com]
+Project Lead: Medhat Ali
 🔗 GitHub: @MedhatZ
-
-Built with 💪 for student success.
->>>>>>> ac0c2f4d38dbd0f4fcfa6762d54857acdf980c10
